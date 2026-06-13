@@ -1,0 +1,23 @@
+{
+    "transaction_amount": 39.79,
+    "transaction_type": "POS",
+    "account_balance": 93213.17,
+    "device_type": "Laptop",
+    "location": "Sydney",
+    "merchant_category": "Travel",
+    "ip_address_flag": 0,
+    "previous_fraudulent_activity": 0,
+    "daily_transaction_count": 7,
+    "avg_transaction_amount_7d": 437.63,
+    "failed_transaction_count_7d": 3,
+    "card_type": "Amex",
+    "card_age": 65,
+    "transaction_distance": 883.17,
+    "authentication_method": "Biometric",
+    "is_weekend": 0,
+    "year": 2023,
+    "month": 8,
+    "day": 14,
+    "hour": 19,
+    "day_of_week": 0
+}

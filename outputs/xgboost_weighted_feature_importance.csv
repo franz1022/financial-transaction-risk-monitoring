@@ -1,0 +1,41 @@
+feature,importance
+num__failed_transaction_count_7d,0.8084204
+cat__authentication_method_Password,0.008338888
+cat__authentication_method_PIN,0.0077010654
+cat__merchant_category_Travel,0.006600515
+cat__location_Sydney,0.0062234644
+cat__device_type_Laptop,0.0061982176
+num__ip_address_flag,0.0060057025
+cat__location_New York,0.0057089753
+cat__location_London,0.005636393
+cat__authentication_method_OTP,0.0056140516
+num__day,0.0055947956
+cat__transaction_type_Online,0.005434152
+cat__transaction_type_Bank Transfer,0.005377938
+cat__merchant_category_Clothing,0.0052728816
+num__card_age,0.005167504
+cat__merchant_category_Groceries,0.005150018
+cat__location_Tokyo,0.005129892
+num__transaction_amount,0.0050684144
+cat__device_type_Mobile,0.0050405264
+cat__card_type_Mastercard,0.0050013973
+cat__authentication_method_Biometric,0.0049104895
+num__account_balance,0.0049016215
+num__day_of_week,0.004778856
+cat__transaction_type_POS,0.004777888
+num__transaction_distance,0.004725377
+cat__location_Mumbai,0.004721723
+cat__merchant_category_Electronics,0.00465658
+num__avg_transaction_amount_7d,0.0046365424
+cat__card_type_Discover,0.0046304264
+num__hour,0.004532467
+num__month,0.0045237164
+cat__card_type_Amex,0.0043546464
+num__daily_transaction_count,0.0041759117
+cat__merchant_category_Restaurants,0.00403979
+cat__device_type_Tablet,0.0036946489
+num__is_weekend,0.0036573776
+cat__card_type_Visa,0.003539506
+num__previous_fraudulent_activity,0.0032894062
+cat__transaction_type_ATM Withdrawal,0.0027678385
+num__year,0.0

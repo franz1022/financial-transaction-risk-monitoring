@@ -1,0 +1,5 @@
+transaction_type,total_transactions,fraud_transactions,fraud_rate_pct,avg_transaction_amount
+ATM Withdrawal,12453,4046,32.49,100.14
+Online,12546,4031,32.13,99.55
+Bank Transfer,12452,3995,32.08,98.91
+POS,12549,3995,31.84,99.05

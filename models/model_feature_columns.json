@@ -1,0 +1,58 @@
+{
+    "target_col": "fraud_label",
+    "feature_cols": [
+        "transaction_amount",
+        "transaction_type",
+        "account_balance",
+        "device_type",
+        "location",
+        "merchant_category",
+        "ip_address_flag",
+        "previous_fraudulent_activity",
+        "daily_transaction_count",
+        "avg_transaction_amount_7d",
+        "failed_transaction_count_7d",
+        "card_type",
+        "card_age",
+        "transaction_distance",
+        "authentication_method",
+        "is_weekend",
+        "year",
+        "month",
+        "day",
+        "hour",
+        "day_of_week"
+    ],
+    "categorical_cols": [
+        "transaction_type",
+        "device_type",
+        "location",
+        "merchant_category",
+        "card_type",
+        "authentication_method"
+    ],
+    "numeric_cols": [
+        "transaction_amount",
+        "account_balance",
+        "ip_address_flag",
+        "previous_fraudulent_activity",
+        "daily_transaction_count",
+        "avg_transaction_amount_7d",
+        "failed_transaction_count_7d",
+        "card_age",
+        "transaction_distance",
+        "is_weekend",
+        "year",
+        "month",
+        "day",
+        "hour",
+        "day_of_week"
+    ],
+    "excluded_cols": [
+        "transaction_id",
+        "user_id",
+        "timestamp",
+        "risk_score",
+        "fraud_label"
+    ]
+}

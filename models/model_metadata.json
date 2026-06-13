@@ -1,0 +1,31 @@
+{
+    "project_name": "Financial Transaction Risk Monitoring",
+    "model_name": "Random Forest Fraud Detection Pipeline",
+    "model_file": "C:\\Users\\lenovo\\Desktop\\financial-transaction-risk-monitoring\\models\\fraud_detection_random_forest_pipeline.pkl",
+    "training_data": "C:\\Users\\lenovo\\Desktop\\financial-transaction-risk-monitoring\\data\\processed\\fraud_data_cleaned.csv",
+    "number_of_rows": 50000,
+    "number_of_features": 21,
+    "target_column": "fraud_label",
+    "risk_score_excluded": true,
+    "risk_score_exclusion_reason": "Existing risk_score was excluded to avoid potential target leakage.",
+    "low_risk_threshold": 0.2,
+    "high_risk_threshold": 0.7,
+    "evaluation_metrics": {
+        "model": "Random Forest",
+        "accuracy": 0.8772,
+        "precision": 1.0,
+        "recall": 0.617802676626206,
+        "f1": 0.7637552904963447,
+        "roc_auc": 0.8124268714410767,
+        "pr_auc": 0.8093564702282713,
+        "true_negative": 6787,
+        "false_positive": 0,
+        "false_negative": 1228,
+        "true_positive": 1985
+    },
+    "recommended_actions": {
+        "Low": "Auto Approve",
+        "Medium": "Monitor / Secondary Check",
+        "High": "Manual Review / Alert"
+    }
+}

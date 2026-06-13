@@ -1,0 +1,19 @@
+metric,value
+total_transactions,50000
+normal_transactions,33933
+fraud_transactions,16067
+overall_fraud_rate_pct,32.13
+top_transaction_type_by_fraud_rate,ATM Withdrawal
+top_transaction_type_fraud_rate_pct,32.49
+top_device_type_by_fraud_rate,Tablet
+top_device_type_fraud_rate_pct,32.56
+top_location_by_fraud_rate,New York
+top_location_fraud_rate_pct,32.49
+top_merchant_category_by_fraud_rate,Restaurants
+top_merchant_category_fraud_rate_pct,32.63
+top_authentication_method_by_fraud_rate,OTP
+top_authentication_method_fraud_rate_pct,32.52
+highest_fraud_rate_hour,22
+highest_hour_fraud_rate_pct,33.76
+highest_fraud_rate_month,1
+highest_month_fraud_rate_pct,33.09

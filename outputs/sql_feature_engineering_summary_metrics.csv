@@ -1,0 +1,11 @@
+metric,value
+database_path,C:\Users\lenovo\Desktop\financial-transaction-risk-monitoring\data\processed\fraud_monitoring.db
+transaction_table,transactions
+total_transactions,50000
+unique_users,8963
+overall_fraud_rate_pct,32.13
+user_feature_rows,8963
+high_risk_transactions_selected,31871
+high_risk_group_fraud_rate_pct,41.67
+high_amount_threshold_95pct,294.3
+high_distance_threshold_95pct,4756.93

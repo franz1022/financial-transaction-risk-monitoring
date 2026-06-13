@@ -1,0 +1,3 @@
+model_type,model,roc_auc_pct,pr_auc_pct,business_use_case
+Unsupervised Anomaly Detection,Isolation Forest,53.93346638460568,35.14337819960323,Detect unusual transactions when fraud labels are incomplete or delayed
+Supervised Classification,Random Forest,81.24,80.94,Predict fraud when historical fraud labels are available

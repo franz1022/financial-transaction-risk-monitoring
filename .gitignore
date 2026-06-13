@@ -1,0 +1,68 @@
+﻿# ============================================================
+# Python
+# ============================================================
+
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+
+# ============================================================
+# Virtual environment
+# ============================================================
+
+.venv/
+venv/
+env/
+
+# ============================================================
+# VS Code / operating system
+# ============================================================
+
+.vscode/
+.DS_Store
+Thumbs.db
+
+# ============================================================
+# Streamlit private configuration
+# ============================================================
+
+.streamlit/secrets.toml
+
+# ============================================================
+# Logs
+# ============================================================
+
+*.log
+logs/
+
+# ============================================================
+# Raw and processed datasets
+# The public dataset source will be documented in README.
+# ============================================================
+
+data/raw/*
+!data/raw/.gitkeep
+
+data/processed/*
+!data/processed/.gitkeep
+
+# ============================================================
+# Large intermediate prediction outputs
+# Keep summary CSV files, figures and Top 100 monitoring sample.
+# ============================================================
+
+outputs/*predictions*.csv
+outputs/scored_transactions_with_risk_level.csv
+outputs/high_risk_transactions_model_based.csv
+outputs/anomaly_detection_scored_transactions.csv
+outputs/sql_high_risk_transactions_rule_based.csv
+
+# ============================================================
+# SQLite temporary files
+# ============================================================
+
+*.db-journal
+*.sqlite-journal

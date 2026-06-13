@@ -1,0 +1,9 @@
+metric,value
+best_model_by_pr_auc,Random Forest
+best_model_accuracy_pct,87.72
+best_model_precision_pct,100.0
+best_model_recall_pct,61.78
+best_model_f1_pct,76.38
+best_model_roc_auc_pct,81.24
+best_model_pr_auc_pct,80.94
+xgboost_scale_pos_weight,2.1119

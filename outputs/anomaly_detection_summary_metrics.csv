@@ -1,0 +1,13 @@
+metric,value
+model,Isolation Forest
+training_mode,Unsupervised
+test_transactions,10000
+test_fraud_transactions,3213
+roc_auc_pct,53.93
+pr_auc_pct,35.14
+default_review_rate_pct,10.0
+default_top10_anomaly_threshold,-0.000131
+best_review_rate_by_f1_pct,30.0
+best_precision_pct,36.1
+best_recall_pct,33.71
+best_f1_pct,34.86

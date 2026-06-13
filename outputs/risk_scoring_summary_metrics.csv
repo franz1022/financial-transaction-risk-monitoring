@@ -1,0 +1,15 @@
+metric,value
+total_scored_transactions,10000.0
+total_fraud_transactions,3213.0
+overall_fraud_rate_pct,32.13
+low_risk_transactions,6405.0
+low_risk_pct,64.05
+medium_risk_transactions,1610.0
+medium_risk_pct,16.1
+high_risk_transactions,1985.0
+high_risk_pct,19.85
+high_risk_fraud_count,1985.0
+high_risk_precision_pct,100.0
+high_risk_recall_pct,61.78
+low_threshold,0.2
+high_threshold,0.7

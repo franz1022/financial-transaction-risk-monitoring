@@ -1,0 +1,2 @@
+total_transactions,normal_transactions,fraud_transactions,fraud_rate_pct,unique_users,transaction_type_count,device_type_count,location_count,merchant_category_count
+50000,33933,16067,32.13,8963,4,3,5,5
