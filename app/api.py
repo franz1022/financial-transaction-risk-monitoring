@@ -1,3 +1,4 @@
+from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
@@ -7,7 +8,7 @@ import logging
 import joblib
 import pandas as pd
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 # ============================================================
@@ -26,23 +27,24 @@ logger = logging.getLogger(__name__)
 # 1. 项目路径
 # ============================================================
 
-# 当前文件位于：
-# financial-transaction-risk-monitoring/app/api.py
-#
-# parents[1] 表示项目根目录：
-# financial-transaction-risk-monitoring/
 BASE_DIR = Path(__file__).resolve().parents[1]
 
-MODEL_FILE = (
+DIAGNOSTIC_MODEL_FILE = (
     BASE_DIR
     / "models"
-    / "fraud_detection_random_forest_pipeline.pkl"
+    / "residual_logistic_diagnostic_pipeline.pkl"
 )
 
 FEATURE_FILE = (
     BASE_DIR
     / "models"
-    / "model_feature_columns.json"
+    / "diagnostic_model_feature_columns.json"
+)
+
+POLICY_FILE = (
+    BASE_DIR
+    / "models"
+    / "decision_policy.json"
 )
 
 METADATA_FILE = (
@@ -53,12 +55,13 @@ METADATA_FILE = (
 
 
 # ============================================================
-# 2. 检查模型文件是否存在
+# 2. 检查并加载治理安全的模型文件
 # ============================================================
 
 required_files = [
-    MODEL_FILE,
+    DIAGNOSTIC_MODEL_FILE,
     FEATURE_FILE,
+    POLICY_FILE,
     METADATA_FILE,
 ]
 
@@ -68,65 +71,132 @@ for file_path in required_files:
             f"Required file not found: {file_path}"
         )
 
-
-# ============================================================
-# 3. 加载模型与配置信息
-# ============================================================
-
-fraud_model = joblib.load(MODEL_FILE)
+diagnostic_model = joblib.load(
+    DIAGNOSTIC_MODEL_FILE
+)
 
 feature_info = json.loads(
-    FEATURE_FILE.read_text(encoding="utf-8")
+    FEATURE_FILE.read_text(
+        encoding="utf-8"
+    )
+)
+
+decision_policy = json.loads(
+    POLICY_FILE.read_text(
+        encoding="utf-8"
+    )
 )
 
 metadata = json.loads(
-    METADATA_FILE.read_text(encoding="utf-8")
+    METADATA_FILE.read_text(
+        encoding="utf-8"
+    )
 )
 
-MODEL_FEATURES = feature_info["feature_cols"]
+MODEL_FEATURES = feature_info[
+    "feature_columns"
+]
 
-MODEL_NAME = metadata.get(
-    "model_name",
-    "Random Forest Fraud Detection Pipeline",
+PRIMARY_RULE = decision_policy[
+    "primary_decision_layer"
+]
+
+RULE_FEATURE = str(
+    PRIMARY_RULE["feature"]
 )
 
-LOW_RISK_THRESHOLD = float(
-    metadata.get("low_risk_threshold", 0.20)
+RULE_THRESHOLD = int(
+    PRIMARY_RULE["threshold"]
 )
 
-HIGH_RISK_THRESHOLD = float(
-    metadata.get("high_risk_threshold", 0.70)
+POLICY_VERSION = str(
+    decision_policy.get(
+        "policy_version",
+        "2.0",
+    )
 )
 
-logger.info("Fraud model loaded successfully.")
-logger.info("Model path: %s", MODEL_FILE)
-logger.info("Number of model features: %d", len(MODEL_FEATURES))
+ARTIFACT_NAME = str(
+    metadata.get(
+        "artifact_name",
+        "Residual Logistic Diagnostic Pipeline",
+    )
+)
+
+ARTIFACT_ROLE = str(
+    metadata.get(
+        "artifact_role",
+        "diagnostic_only",
+    )
+)
+
+DEPLOYMENT_ELIGIBLE = bool(
+    metadata.get(
+        "deployment_eligible",
+        False,
+    )
+)
+
+AUTOMATIC_DECISION_APPROVED = bool(
+    metadata.get(
+        "automatic_decision_approved",
+        False,
+    )
+)
+
+GOVERNANCE_WARNING = str(
+    decision_policy.get(
+        "governance_warning",
+        (
+            "Synthetic portfolio dataset only. "
+            "No automatic customer-impact action is approved."
+        ),
+    )
+)
+
+logger.info(
+    "Diagnostic model and governance policy loaded."
+)
+logger.info(
+    "Artifact: %s | role=%s | deployment_eligible=%s",
+    ARTIFACT_NAME,
+    ARTIFACT_ROLE,
+    DEPLOYMENT_ELIGIBLE,
+)
 
 
 # ============================================================
-# 4. 创建 FastAPI 应用
+# 3. 创建 FastAPI 应用
 # ============================================================
 
 app = FastAPI(
-    title="Financial Transaction Risk Monitoring API",
-    description=(
-        "A machine-learning inference API for transaction-level "
-        "fraud probability, risk scoring and recommended actions."
+    title=(
+        "Financial Transaction Risk "
+        "Monitoring Governance API"
     ),
-    version="1.0.0",
+    description=(
+        "A governance-aware portfolio API. "
+        "It exposes a transparent synthetic-data rule "
+        "and an optional residual diagnostic score. "
+        "It does not approve, reject, or block transactions."
+    ),
+    version="2.0.0",
 )
 
 
 # ============================================================
-# 5. API 输入格式
+# 4. API 输入格式
 # ============================================================
 
 class TransactionRequest(BaseModel):
     """
-    用户提交一笔新的交易。
+    输入一笔交易。
 
     timestamp 会自动拆分为：
-    year、month、day、hour、day_of_week、is_weekend。
+    month、day、hour、day_of_week、is_weekend。
+
+    failed_transaction_count_7d 仅用于透明规则层，
+    不进入残余诊断模型。
     """
 
     transaction_amount: float = Field(
@@ -138,7 +208,8 @@ class TransactionRequest(BaseModel):
     transaction_type: str = Field(
         ...,
         description=(
-            "Examples: Online, POS, ATM Withdrawal, Bank Transfer"
+            "Examples: Online, POS, ATM Withdrawal, "
+            "Bank Transfer"
         ),
     )
 
@@ -182,7 +253,9 @@ class TransactionRequest(BaseModel):
         ...,
         ge=0,
         le=1,
-        description="1 means previous fraudulent activity exists",
+        description=(
+            "1 means previous fraudulent activity exists"
+        ),
     )
 
     daily_transaction_count: int = Field(
@@ -194,18 +267,26 @@ class TransactionRequest(BaseModel):
     avg_transaction_amount_7d: float = Field(
         ...,
         ge=0,
-        description="Average transaction amount in the last seven days",
+        description=(
+            "Average transaction amount "
+            "in the previous seven days"
+        ),
     )
 
     failed_transaction_count_7d: int = Field(
         ...,
         ge=0,
-        description="Failed transaction count in the last seven days",
+        description=(
+            "Failed transaction count "
+            "in the previous seven days"
+        ),
     )
 
     card_type: str = Field(
         ...,
-        description="Examples: Visa, Mastercard, Amex, Discover",
+        description=(
+            "Examples: Visa, Mastercard, Amex, Discover"
+        ),
     )
 
     card_age: int = Field(
@@ -222,7 +303,9 @@ class TransactionRequest(BaseModel):
 
     authentication_method: str = Field(
         ...,
-        description="Examples: OTP, PIN, Password, Biometric",
+        description=(
+            "Examples: OTP, PIN, Password, Biometric"
+        ),
     )
 
     model_config = ConfigDict(
@@ -243,84 +326,95 @@ class TransactionRequest(BaseModel):
                 "card_type": "Visa",
                 "card_age": 36,
                 "transaction_distance": 4800.00,
-                "authentication_method": "OTP"
+                "authentication_method": "OTP",
             }
         }
     )
 
 
 # ============================================================
-# 6. API 输出格式
+# 5. API 输出格式
 # ============================================================
 
-class FraudPredictionResponse(BaseModel):
-    model_name: str
+class GovernancePredictionResponse(BaseModel):
+    policy_version: str
 
-    fraud_probability: float
-    model_risk_score: float
+    artifact_name: str
+    artifact_role: str
+    deployment_eligible: bool
+    automatic_decision_approved: bool
 
-    default_binary_prediction: int
-    default_prediction_threshold: float
+    rule_triggered: bool
+    rule_feature: str
+    rule_operator: str
+    rule_threshold: int
+    observed_rule_value: int
 
-    risk_level: str
+    decision_source: str
+    alert_label: str
+
+    diagnostic_probability: float | None
+    diagnostic_score: float | None
+    diagnostic_model_applied: bool
+
     recommended_action: str
-
-    low_risk_threshold: float
-    high_risk_threshold: float
+    governance_warning: str
 
     derived_time_features: dict[str, int]
 
 
 # ============================================================
-# 7. 风险等级函数
+# 6. 输入转换函数
 # ============================================================
 
-def assign_risk_level(
-    fraud_probability: float,
-) -> tuple[str, str]:
-    """
-    把 fraud probability 转换成风险等级和业务动作。
-    """
-
-    if fraud_probability < LOW_RISK_THRESHOLD:
-        return "Low", "Auto Approve"
-
-    if fraud_probability < HIGH_RISK_THRESHOLD:
-        return "Medium", "Monitor / Secondary Check"
-
-    return "High", "Manual Review / Alert"
-
-
-# ============================================================
-# 8. 输入数据转换函数
-# ============================================================
-
-def build_model_input(
+def build_diagnostic_input(
     transaction: TransactionRequest,
 ) -> tuple[pd.DataFrame, dict[str, int]]:
     """
-    把 API 输入转换成模型训练时使用的 21 个字段。
+    构建残余诊断模型输入。
+
+    注意：
+    - year 被训练脚本排除，因为数据只有 2023 年；
+    - failed_transaction_count_7d 仅用于规则层；
+    - risk_score 不由 API 接收，也不进入模型。
     """
 
-    timestamp = pd.Timestamp(transaction.timestamp)
+    timestamp = pd.Timestamp(
+        transaction.timestamp
+    )
 
     time_features = {
-        "year": int(timestamp.year),
         "month": int(timestamp.month),
         "day": int(timestamp.day),
         "hour": int(timestamp.hour),
-        "day_of_week": int(timestamp.dayofweek),
-        "is_weekend": int(timestamp.dayofweek >= 5),
+        "day_of_week": int(
+            timestamp.dayofweek
+        ),
+        "is_weekend": int(
+            timestamp.dayofweek >= 5
+        ),
     }
 
     transaction_row = {
-        "transaction_amount": transaction.transaction_amount,
-        "transaction_type": transaction.transaction_type,
-        "account_balance": transaction.account_balance,
-        "device_type": transaction.device_type,
+        "transaction_amount": (
+            transaction.transaction_amount
+        ),
+        "transaction_type": (
+            transaction.transaction_type
+        ),
+        "account_balance": (
+            transaction.account_balance
+        ),
+        "device_type": (
+            transaction.device_type
+        ),
         "location": transaction.location,
-        "merchant_category": transaction.merchant_category,
-        "ip_address_flag": transaction.ip_address_flag,
+        "merchant_category": (
+            transaction.merchant_category
+        ),
+        "ip_address_flag": (
+            transaction.ip_address_flag
+        ),
         "previous_fraudulent_activity": (
             transaction.previous_fraudulent_activity
         ),
@@ -330,19 +424,20 @@ def build_model_input(
         "avg_transaction_amount_7d": (
             transaction.avg_transaction_amount_7d
         ),
-        "failed_transaction_count_7d": (
-            transaction.failed_transaction_count_7d
-        ),
         "card_type": transaction.card_type,
         "card_age": transaction.card_age,
-        "transaction_distance": transaction.transaction_distance,
+        "transaction_distance": (
+            transaction.transaction_distance
+        ),
         "authentication_method": (
             transaction.authentication_method
         ),
         **time_features,
     }
 
-    input_df = pd.DataFrame([transaction_row])
+    input_df = pd.DataFrame(
+        [transaction_row]
+    )
 
     missing_features = [
         feature
@@ -352,24 +447,34 @@ def build_model_input(
 
     if missing_features:
         raise ValueError(
-            f"Missing required model features: {missing_features}"
+            "Missing required diagnostic features: "
+            f"{missing_features}"
         )
 
-    # 确保输入字段顺序和训练时完全一致
-    input_df = input_df[MODEL_FEATURES]
+    input_df = input_df[
+        MODEL_FEATURES
+    ]
 
     return input_df, time_features
 
 
 # ============================================================
-# 9. 首页
+# 7. 首页
 # ============================================================
 
 @app.get("/")
 def root():
     return {
-        "message": "Financial Transaction Risk Monitoring API",
-        "model_name": MODEL_NAME,
+        "message": (
+            "Financial Transaction Risk "
+            "Monitoring Governance API"
+        ),
+        "version": "2.0.0",
+        "policy_version": POLICY_VERSION,
+        "artifact_role": ARTIFACT_ROLE,
+        "deployment_eligible": (
+            DEPLOYMENT_ELIGIBLE
+        ),
         "health_check": "/health",
         "prediction_endpoint": "/predict",
         "api_documentation": "/docs",
@@ -377,91 +482,192 @@ def root():
 
 
 # ============================================================
-# 10. 健康检查
+# 8. 健康检查
 # ============================================================
 
 @app.get("/health")
 def health_check():
     return {
         "status": "ok",
-        "model_loaded": True,
-        "model_name": MODEL_NAME,
-        "number_of_features": len(MODEL_FEATURES),
-        "low_risk_threshold": LOW_RISK_THRESHOLD,
-        "high_risk_threshold": HIGH_RISK_THRESHOLD,
+        "policy_version": POLICY_VERSION,
+        "diagnostic_model_loaded": True,
+        "artifact_name": ARTIFACT_NAME,
+        "artifact_role": ARTIFACT_ROLE,
+        "number_of_diagnostic_features": len(
+            MODEL_FEATURES
+        ),
+        "deployment_eligible": (
+            DEPLOYMENT_ELIGIBLE
+        ),
+        "automatic_decision_approved": (
+            AUTOMATIC_DECISION_APPROVED
+        ),
+        "rule_feature": RULE_FEATURE,
+        "rule_operator": ">=",
+        "rule_threshold": RULE_THRESHOLD,
+        "governance_warning": (
+            GOVERNANCE_WARNING
+        ),
     }
 
 
 # ============================================================
-# 11. 单笔交易预测
+# 9. 单笔交易治理评估
 # ============================================================
 
 @app.post(
     "/predict",
-    response_model=FraudPredictionResponse,
+    response_model=(
+        GovernancePredictionResponse
+    ),
 )
-def predict_fraud(
+def evaluate_transaction(
     transaction: TransactionRequest,
 ):
     """
-    接收一笔交易，返回：
+    返回透明规则结果和诊断信息。
 
-    1. Fraud Probability
-    2. 0–100 Model Risk Score
-    3. Default Binary Prediction
-    4. Low / Medium / High Risk Level
-    5. Recommended Business Action
+    重要：
+    - 规则触发只表示 Synthetic Rule Alert；
+    - 诊断模型无自动决策权；
+    - API 不执行批准、拒绝或交易拦截。
     """
 
     try:
-        input_df, time_features = build_model_input(transaction)
-
-        fraud_probability = float(
-            fraud_model.predict_proba(input_df)[0, 1]
+        observed_rule_value = int(
+            getattr(
+                transaction,
+                RULE_FEATURE,
+            )
         )
 
-        model_risk_score = fraud_probability * 100
-
-        default_binary_prediction = int(
-            fraud_probability >= 0.50
+        rule_triggered = bool(
+            observed_rule_value
+            >= RULE_THRESHOLD
         )
 
-        risk_level, recommended_action = assign_risk_level(
-            fraud_probability
+        input_df, time_features = (
+            build_diagnostic_input(
+                transaction
+            )
         )
+
+        if rule_triggered:
+            diagnostic_probability = None
+            diagnostic_score = None
+            diagnostic_model_applied = False
+
+            decision_source = (
+                "synthetic_failed_count_rule"
+            )
+            alert_label = (
+                str(
+                    PRIMARY_RULE.get(
+                        "trigger_label",
+                        "Synthetic Rule Alert",
+                    )
+                )
+            )
+            recommended_action = str(
+                PRIMARY_RULE.get(
+                    "recommended_action",
+                    (
+                        "Manual review for portfolio "
+                        "demonstration only"
+                    ),
+                )
+            )
+
+        else:
+            probability = float(
+                diagnostic_model.predict_proba(
+                    input_df
+                )[0, 1]
+            )
+
+            diagnostic_probability = round(
+                probability,
+                6,
+            )
+            diagnostic_score = round(
+                probability * 100,
+                2,
+            )
+            diagnostic_model_applied = True
+
+            decision_source = (
+                "residual_diagnostic_model"
+            )
+            alert_label = (
+                "No Reliable Automated Decision"
+            )
+            recommended_action = (
+                "Do not automatically approve, reject, "
+                "or block. Diagnostic score is shown for "
+                "engineering and model-risk review only."
+            )
 
         logger.info(
-            "Prediction completed | probability=%.4f | risk=%s",
-            fraud_probability,
-            risk_level,
+            (
+                "Evaluation completed | "
+                "rule_triggered=%s | "
+                "decision_source=%s"
+            ),
+            rule_triggered,
+            decision_source,
         )
 
-        return FraudPredictionResponse(
-            model_name=MODEL_NAME,
-            fraud_probability=round(
-                fraud_probability,
-                6,
+        return GovernancePredictionResponse(
+            policy_version=POLICY_VERSION,
+            artifact_name=ARTIFACT_NAME,
+            artifact_role=ARTIFACT_ROLE,
+            deployment_eligible=(
+                DEPLOYMENT_ELIGIBLE
             ),
-            model_risk_score=round(
-                model_risk_score,
-                2,
+            automatic_decision_approved=(
+                AUTOMATIC_DECISION_APPROVED
             ),
-            default_binary_prediction=(
-                default_binary_prediction
+            rule_triggered=rule_triggered,
+            rule_feature=RULE_FEATURE,
+            rule_operator=">=",
+            rule_threshold=RULE_THRESHOLD,
+            observed_rule_value=(
+                observed_rule_value
             ),
-            default_prediction_threshold=0.50,
-            risk_level=risk_level,
-            recommended_action=recommended_action,
-            low_risk_threshold=LOW_RISK_THRESHOLD,
-            high_risk_threshold=HIGH_RISK_THRESHOLD,
-            derived_time_features=time_features,
+            decision_source=decision_source,
+            alert_label=alert_label,
+            diagnostic_probability=(
+                diagnostic_probability
+            ),
+            diagnostic_score=(
+                diagnostic_score
+            ),
+            diagnostic_model_applied=(
+                diagnostic_model_applied
+            ),
+            recommended_action=(
+                recommended_action
+            ),
+            governance_warning=(
+                GOVERNANCE_WARNING
+            ),
+            derived_time_features=(
+                time_features
+            ),
         )
+
+    except HTTPException:
+        raise
 
     except Exception as exc:
-        logger.exception("Prediction failed.")
+        logger.exception(
+            "Transaction evaluation failed."
+        )
 
         raise HTTPException(
             status_code=500,
-            detail=f"Prediction failed: {str(exc)}",
+            detail=(
+                "Transaction evaluation failed: "
+                f"{str(exc)}"
+            ),
         ) from exc
-

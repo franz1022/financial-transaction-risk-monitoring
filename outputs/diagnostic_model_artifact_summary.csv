@@ -1,0 +1,2 @@
+artifact,artifact_role,deployment_eligible,training_rows,feature_count,validation_roc_auc,validation_pr_auc,test_roc_auc,test_pr_auc,test_fraud_rate,deployment_decision
+Residual Logistic Diagnostic Pipeline,diagnostic_only,False,24026,19,0.5110952090835659,0.15855565351740836,0.48750561281625415,0.14580837151351927,0.15063338768343157,do_not_deploy_residual_model
