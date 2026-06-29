@@ -55,8 +55,6 @@ data/processed/*
 # ============================================================
 
 outputs/*predictions*.csv
-outputs/scored_transactions_with_risk_level.csv
-outputs/high_risk_transactions_model_based.csv
 outputs/anomaly_detection_scored_transactions.csv
 outputs/sql_high_risk_transactions_rule_based.csv
 

@@ -1,115 +1,460 @@
+# Financial Transaction Risk Monitoring — Governance-Aware Prototype
 
-# Financial Transaction Risk Monitoring System
+An end-to-end portfolio project for financial transaction risk monitoring using Python, SQL, machine learning, FastAPI, Streamlit, Docker Compose, and model-risk governance.
 
-An end-to-end financial transaction fraud detection and risk monitoring prototype built with Python, SQL, machine learning, FastAPI, Streamlit and Docker Compose.
+The project originally produced strong fraud-detection scores on a synthetic dataset. A later methodology audit showed that much of this apparent performance came from a deterministic proxy feature. The final V2 system therefore focuses on **proxy detection, temporal validation, honest model rejection, transparent policy rules, and governance-aware deployment** rather than presenting an inflated production claim.
 
-The project demonstrates the complete workflow from transaction data preparation and fraud analysis to supervised modeling, anomaly detection, operational risk scoring, API deployment and interactive monitoring.
-
-> **Important:** This project uses a public synthetic dataset and is designed as a portfolio proof of concept. Test-set performance should not be interpreted as production banking performance.
-
----
-
-## Project Overview
-
-Financial institutions need to identify suspicious transactions while controlling false alerts and manual-review workload.
-
-This project builds a transaction-level monitoring workflow that:
-
-* cleans and validates transaction data;
-* analyses fraud patterns using Python and SQL;
-* engineers behavioural and time-related features;
-* compares Logistic Regression, Random Forest and XGBoost;
-* studies precision, recall and review-workload trade-offs;
-* converts model probabilities into operational risk levels;
-* supplements supervised learning with Isolation Forest;
-* exposes the selected model through a FastAPI service;
-* provides an interactive Streamlit monitoring dashboard;
-* containerises the API and dashboard using Docker Compose.
+> **Important**
+>
+> This repository uses a synthetic dataset. The rule and diagnostic model are not approved for production use, transaction blocking, automatic approval, automatic rejection, or any other customer-impact decision.
 
 ---
 
-## System Architecture
+## Project Highlights
 
-![Financial Risk Monitoring System Architecture](outputs/architecture/financial_risk_system_architecture.png)
+- 50,000 synthetic financial transactions covering January–December 2023.
+- Python and SQL data cleaning, exploratory analysis, and feature engineering.
+- Logistic Regression, Random Forest, XGBoost, and Isolation Forest experiments.
+- Feature-leakage and proxy-feature audit.
+- Chronological Train / Validation / Test evaluation.
+- Benchmark-versus-conservative feature ablation.
+- Residual-signal analysis after removing the deterministic proxy segment.
+- Explicit decision to reject a weak residual model from deployment.
+- Governance-aware FastAPI service.
+- Streamlit dashboard for rule, validation, and governance evidence.
+- Docker Compose deployment.
+- 17 automated API and validation tests.
 
-The main system workflow is:
+---
+
+## Architecture
+
+![Governance-Aware Financial Risk Monitoring Architecture](outputs/architecture/financial_risk_system_architecture.png)
 
 ```text
 Synthetic Transaction Data
         ↓
-Data Cleaning and Validation
+Cleaning, EDA and SQL Analytics
         ↓
-EDA and SQL Feature Engineering
+Feature Leakage and Proxy Audit
         ↓
-Supervised and Unsupervised Modeling
+Chronological Validation and Feature Ablation
         ↓
-Threshold Analysis and Risk Scoring
+Transparent Synthetic Rule + Residual Diagnostic Model
         ↓
-Saved Machine Learning Pipeline
+Governance Policy: Do Not Deploy / No Automated Decision
         ↓
-FastAPI Inference Service
+FastAPI Governance Service
         ↓
-Streamlit Monitoring Dashboard
+Streamlit Validation Dashboard
         ↓
-Docker Compose Deployment
+Docker Compose + Automated Tests
 ```
 
 ---
 
 ## Dataset
 
-The project uses a synthetic financial transaction fraud dataset containing:
-
-| Item                 |                 Value |
-| -------------------- | --------------------: |
-| Transactions         |                50,000 |
-| Original variables   |                    21 |
-| Time period          | January–December 2023 |
-| Normal transactions  |                33,933 |
-| Fraud transactions   |                16,067 |
-| Synthetic fraud rate |                32.13% |
-| Missing values       |                     0 |
-| Duplicate rows       |                     0 |
+| Item | Value |
+|---|---:|
+| Transactions | 50,000 |
+| Original variables | 21 |
+| Cleaned variables | 26 |
+| Time period | January–December 2023 |
+| Normal transactions | 33,933 |
+| Fraud transactions | 16,067 |
+| Synthetic fraud rate | 32.134% |
+| Missing values | 0 |
+| Duplicate rows | 0 |
 
 Example variables include:
 
-* transaction amount and account balance;
-* transaction type and merchant category;
-* device type and location;
-* suspicious IP indicator;
-* previous fraudulent activity;
-* recent failed transaction count;
-* daily transaction frequency;
-* card age and card type;
-* authentication method;
-* transaction distance.
+- transaction amount and account balance;
+- transaction type and merchant category;
+- device type and location;
+- suspicious IP indicator;
+- previous fraudulent activity;
+- daily and failed transaction counts;
+- card age and card type;
+- authentication method;
+- transaction distance.
 
-The original `risk_score` variable was intentionally excluded from model training because it showed a strong relationship with the target and could introduce target leakage.
-
-The dataset itself is not committed to this repository. Place the source file at:
+The source dataset is not committed to the repository. Place it at:
 
 ```text
 data/raw/synthetic_fraud_dataset.csv
 ```
 
-before rerunning the complete data pipeline.
+---
+
+## Why the Methodology Was Upgraded
+
+Early benchmark models appeared to achieve PR-AUC values around 0.80. The methodology audit found that:
+
+- `risk_score` had an unclear target-generation relationship and was excluded;
+- `failed_transaction_count_7d >= 4` mapped to a 100% fraud rate in the synthetic data;
+- the high benchmark performance was therefore largely driven by a deterministic synthetic proxy;
+- random train/test splits overstated the realism of the evaluation.
+
+The V2 methodology replaced this interpretation with:
+
+1. chronological splitting;
+2. feature-leakage and proxy auditing;
+3. benchmark-versus-conservative ablation;
+4. residual-signal analysis;
+5. independent out-of-time testing;
+6. an explicit deployment-rejection decision.
 
 ---
 
-## Technology Stack
+## Temporal Evaluation Design
 
-| Area                  | Technologies                                |
-| --------------------- | ------------------------------------------- |
-| Data processing       | Python, Pandas, NumPy                       |
-| Database and querying | SQLite, SQL                                 |
-| Visualisation         | Matplotlib, Streamlit                       |
-| Machine learning      | Scikit-learn, XGBoost                       |
-| Supervised models     | Logistic Regression, Random Forest, XGBoost |
-| Anomaly detection     | Isolation Forest                            |
-| Model serving         | FastAPI, Pydantic, Uvicorn                  |
-| Dashboard             | Streamlit                                   |
-| Model persistence     | Joblib                                      |
-| Deployment            | Docker, Docker Compose                      |
+The cleaned data is sorted chronologically and divided into:
+
+| Split | Rows | Purpose |
+|---|---:|---|
+| Train | 30,000 | Model fitting |
+| Validation | 10,000 | Model and threshold selection |
+| Test | 10,000 | Final independent evaluation |
+
+The residual analysis excludes transactions where:
+
+```text
+failed_transaction_count_7d >= 4
+```
+
+Residual split sizes are:
+
+| Split | Rows | Fraud rate |
+|---|---:|---:|
+| Train | 24,026 | 15.27% |
+| Validation | 8,047 | 15.46% |
+| Test | 7,973 | 15.06% |
+
+---
+
+## Proxy-Feature Audit
+
+The strongest synthetic pattern was:
+
+```text
+failed_transaction_count_7d >= 4
+```
+
+On the independent temporal test split, this transparent rule produced approximately:
+
+| Metric | Result |
+|---|---:|
+| Review rate | 20.27% |
+| Precision | 100.00% |
+| Recall | 62.79% |
+| False positives | 0 |
+| False negatives | 1,201 |
+
+This is useful for demonstrating proxy detection and rule auditing, but it is **not evidence of real banking fraud performance**.
+
+![Failed Count Fraud Rate Audit](outputs/figures/35_failed_count_fraud_rate_audit.png)
+
+---
+
+## Feature Ablation Results
+
+Two feature sets were compared:
+
+- **Benchmark**: retained `failed_transaction_count_7d`;
+- **Conservative**: excluded both `risk_score` and `failed_transaction_count_7d`.
+
+The benchmark models retained high PR-AUC because they still had access to the deterministic proxy.
+
+The selected conservative XGBoost model produced the following independent test results:
+
+| Metric | Result |
+|---|---:|
+| Review rate | 20.31% |
+| Precision | 31.71% |
+| Recall | 19.95% |
+| F1 | 24.49% |
+| ROC-AUC | 0.4921 |
+| PR-AUC | 0.3204 |
+| Test fraud prevalence | 0.3228 |
+
+The model did not outperform a prevalence baseline in a meaningful way.
+
+![Temporal Ablation Validation PR-AUC](outputs/figures/37_temporal_ablation_validation_pr_auc.png)
+
+---
+
+## Residual-Signal Analysis
+
+The residual analysis focuses only on transactions below the deterministic threshold:
+
+```text
+failed_transaction_count_7d < 4
+```
+
+Logistic Regression was selected using validation data, but its independent test results were:
+
+| Metric | Result |
+|---|---:|
+| ROC-AUC | 0.4875 |
+| PR-AUC | 0.1458 |
+| Fraud prevalence | 0.1506 |
+| Relative PR-AUC uplift | -3.20% |
+
+The residual model therefore failed to demonstrate reliable out-of-time ranking value.
+
+The formal decision is:
+
+```text
+do_not_deploy_residual_model
+```
+
+![Residual Validation PR-AUC](outputs/figures/39_residual_validation_pr_auc.png)
+
+Detailed validation and governance rationale are documented in:
+
+```text
+docs/01_model_validation_and_risk_assessment.md
+```
+
+---
+
+## Final Decision Policy
+
+The final policy has two non-production layers.
+
+### Layer 1 — Transparent Synthetic Rule
+
+```text
+failed_transaction_count_7d >= 4
+```
+
+Result:
+
+```text
+Synthetic Rule Alert
+```
+
+Allowed interpretation:
+
+- portfolio demonstration;
+- transparent rule auditing;
+- manual-review workload analysis.
+
+Not allowed:
+
+- production fraud claim;
+- automatic approval;
+- automatic rejection;
+- transaction blocking;
+- customer-impact decisions.
+
+### Layer 2 — Residual Diagnostic Model
+
+Artifact:
+
+```text
+models/residual_logistic_diagnostic_pipeline.pkl
+```
+
+Role:
+
+```text
+diagnostic_only
+```
+
+The model can return a diagnostic score for engineering and model-risk review, but it has no decision authority.
+
+Policy and metadata files:
+
+```text
+models/decision_policy.json
+models/model_metadata.json
+models/diagnostic_model_feature_columns.json
+```
+
+---
+
+## FastAPI Governance Service
+
+The API exposes:
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/` | Service and policy information |
+| GET | `/health` | Artifact and governance health status |
+| POST | `/predict` | Transparent rule and diagnostic evaluation |
+
+Start the API:
+
+```powershell
+python -m uvicorn app.api:app --reload
+```
+
+Open Swagger documentation:
+
+```text
+http://localhost:8000/docs
+```
+
+### Residual Diagnostic Example
+
+For:
+
+```text
+failed_transaction_count_7d = 3
+```
+
+the API returns a response similar to:
+
+```json
+{
+  "rule_triggered": false,
+  "decision_source": "residual_diagnostic_model",
+  "diagnostic_model_applied": true,
+  "diagnostic_probability": 0.491998,
+  "deployment_eligible": false,
+  "automatic_decision_approved": false,
+  "alert_label": "No Reliable Automated Decision"
+}
+```
+
+### Synthetic Rule Example
+
+For:
+
+```text
+failed_transaction_count_7d = 4
+```
+
+the API returns a response similar to:
+
+```json
+{
+  "rule_triggered": true,
+  "decision_source": "synthetic_failed_count_rule",
+  "diagnostic_model_applied": false,
+  "diagnostic_probability": null,
+  "deployment_eligible": false,
+  "automatic_decision_approved": false,
+  "alert_label": "Synthetic Rule Alert",
+  "recommended_action": "Manual review for portfolio demonstration only"
+}
+```
+
+---
+
+## Streamlit Dashboard
+
+The dashboard contains four sections:
+
+1. **Transaction Evaluation**
+   - submits a transaction to FastAPI;
+   - checks the transparent rule first;
+   - shows a diagnostic score only when the transaction is outside the rule;
+   - clearly states that no automated decision is approved.
+
+2. **Model Validation**
+   - shows temporal ablation results;
+   - compares benchmark and conservative feature sets;
+   - displays independent test evidence.
+
+3. **Rule & Residual Analysis**
+   - visualises the deterministic failed-count proxy;
+   - compares residual models;
+   - shows the two-layer workload trade-off;
+   - displays the deployment-rejection decision.
+
+4. **Governance Summary**
+   - shows artifact role and eligibility;
+   - lists approved and prohibited uses;
+   - reports independent test metrics.
+
+Start the dashboard in a second terminal:
+
+```powershell
+python -m streamlit run app/dashboard.py
+```
+
+Open:
+
+```text
+http://localhost:8501
+```
+
+The FastAPI service must also be running.
+
+---
+
+## Docker Compose
+
+The API and dashboard run as separate services:
+
+```text
+Browser
+   ↓
+Streamlit container
+   ↓  http://api:8000
+FastAPI container
+   ↓
+Diagnostic artifact + policy files
+```
+
+Build and start:
+
+```powershell
+docker compose up -d --build
+```
+
+Check status:
+
+```powershell
+docker compose ps
+```
+
+Endpoints:
+
+| Service | Address |
+|---|---|
+| API health | `http://localhost:8000/health` |
+| Swagger docs | `http://localhost:8000/docs` |
+| Dashboard | `http://localhost:8501` |
+
+Stop:
+
+```powershell
+docker compose down
+```
+
+---
+
+## Automated Tests
+
+The test suite covers:
+
+- root and health endpoints;
+- residual diagnostic path;
+- synthetic rule path;
+- values above the rule threshold;
+- negative and invalid numeric inputs;
+- missing required fields;
+- invalid timestamps;
+- previously unseen categorical values;
+- deployment and automatic-decision governance fields.
+
+Run:
+
+```powershell
+python -m pytest -q
+```
+
+Expected result:
+
+```text
+17 passed
+```
+
+A Starlette deprecation warning may appear with the current test-client dependency combination. It does not indicate a failed test.
 
 ---
 
@@ -124,15 +469,17 @@ financial-transaction-risk-monitoring/
 ├── data/
 │   ├── raw/
 │   └── processed/
+├── docs/
+│   └── 01_model_validation_and_risk_assessment.md
 ├── models/
-│   ├── fraud_detection_random_forest_pipeline.pkl
-│   ├── model_feature_columns.json
-│   └── model_metadata.json
-├── notebooks/
+│   ├── decision_policy.json
+│   ├── diagnostic_model_feature_columns.json
+│   ├── model_metadata.json
+│   └── residual_logistic_diagnostic_pipeline.pkl
 ├── outputs/
 │   ├── architecture/
 │   ├── figures/
-│   └── analysis outputs
+│   └── validation and audit outputs
 ├── sql/
 │   ├── 01_database_fraud_summary.sql
 │   ├── 02_user_risk_features.sql
@@ -140,16 +487,20 @@ financial-transaction-risk-monitoring/
 │   ├── 04_transaction_type_fraud_summary.sql
 │   └── 05_hourly_fraud_summary.sql
 ├── src/
+│   ├── 00_feature_leakage_audit.py
 │   ├── 01_data_cleaning.py
 │   ├── 02_eda_fraud_analysis.py
 │   ├── 03_sql_feature_engineering.py
 │   ├── 04_baseline_model.py
+│   ├── 04b_temporal_ablation_models.py
+│   ├── 04c_residual_signal_analysis.py
 │   ├── 05_class_imbalance_models.py
 │   ├── 06_threshold_analysis.py
-│   ├── 07_risk_scoring.py
 │   ├── 08_anomaly_detection.py
 │   ├── 09_train_and_save_model.py
 │   └── 10_generate_architecture_diagram.py
+├── tests/
+│   └── test_api.py
 ├── .dockerignore
 ├── .gitignore
 ├── compose.yaml
@@ -161,296 +512,7 @@ financial-transaction-risk-monitoring/
 
 ---
 
-## Data Processing and Analysis
-
-### Data Cleaning
-
-The cleaning pipeline:
-
-* standardises column names;
-* converts timestamps to datetime format;
-* checks missing values and duplicate records;
-* generates year, month, day, hour and day-of-week variables;
-* creates a weekend indicator;
-* exports the cleaned dataset for downstream analysis.
-
-The processed dataset contains 50,000 rows and 26 columns.
-
-### Exploratory Data Analysis
-
-The EDA examines fraud patterns by:
-
-* transaction type;
-* device type;
-* location;
-* merchant category;
-* authentication method;
-* hour of day;
-* month;
-* recent failed transaction count;
-* historical fraudulent activity;
-* suspicious IP address.
-
-Individual categorical variables showed relatively weak separation, which motivated multivariate machine-learning models.
-
-### SQL Analytics
-
-The cleaned transactions are loaded into SQLite.
-
-SQL queries generate:
-
-* database-level fraud summaries;
-* user-level behavioural profiles;
-* transaction-type fraud statistics;
-* hourly fraud summaries;
-* rule-based high-risk transaction lists.
-
-The rule-based screen increased the observed fraud rate from 32.13% to 41.67%, but selected approximately 63.7% of all transactions. This demonstrated that fixed rules can enrich fraud concentration while still creating a substantial manual-review workload.
-
----
-
-## Model Development
-
-### Baseline Models
-
-A majority-class baseline and Logistic Regression were used to establish reference performance.
-
-| Model               | Accuracy | Precision | Recall |     F1 | ROC-AUC | PR-AUC |
-| ------------------- | -------: | --------: | -----: | -----: | ------: | -----: |
-| Majority baseline   |   67.87% |     0.00% |  0.00% |  0.00% |  50.00% | 32.13% |
-| Logistic Regression |   86.66% |    93.88% | 62.56% | 75.08% |  80.17% | 80.21% |
-
-The majority baseline illustrates why accuracy alone is inappropriate for fraud-detection evaluation.
-
-### Class-Imbalance Model Comparison
-
-| Model                        | Accuracy | Precision | Recall |     F1 | ROC-AUC | PR-AUC |
-| ---------------------------- | -------: | --------: | -----: | -----: | ------: | -----: |
-| Random Forest                |   87.72% |   100.00% | 61.78% | 76.38% |  81.24% | 80.94% |
-| XGBoost Weighted             |   87.72% |   100.00% | 61.78% | 76.38% |  81.00% | 80.75% |
-| Random Forest Balanced       |   87.72% |   100.00% | 61.78% | 76.38% |  80.76% | 80.67% |
-| Logistic Regression Balanced |   72.81% |    56.01% | 71.68% | 62.88% |  80.16% | 80.21% |
-
-Random Forest achieved the highest test-set PR-AUC and was selected as the primary model.
-
-![Model Comparison by PR-AUC](outputs/figures/18_model_comparison_pr_auc.png)
-
-The selected model is conservative:
-
-* alerts have high observed precision;
-* false-positive review workload is low;
-* some fraudulent transactions remain undetected;
-* threshold selection must reflect business costs and review capacity.
-
----
-
-## Threshold Analysis
-
-Fraud-detection thresholds were evaluated using:
-
-* precision;
-* recall;
-* false-positive rate;
-* missed-fraud rate;
-* manual-review volume.
-
-At the selected high-risk threshold:
-
-| Metric                |  Result |
-| --------------------- | ------: |
-| Transactions reviewed |   1,985 |
-| Review rate           |  19.85% |
-| True positives        |   1,985 |
-| False positives       |       0 |
-| False negatives       |   1,228 |
-| High-risk precision   | 100.00% |
-| High-risk recall      |  61.78% |
-
-The model probabilities are concentrated into relatively distinct score regions. Therefore, several thresholds between approximately 0.30 and 0.70 produce the same binary classifications.
-
----
-
-## Operational Risk Scoring
-
-Model probabilities are converted to a risk score from 0 to 100.
-
-| Risk level | Probability range  | Recommended action        |
-| ---------- | ------------------ | ------------------------- |
-| Low        | Below 0.20         | Auto Approve              |
-| Medium     | 0.20 to below 0.70 | Monitor / Secondary Check |
-| High       | 0.70 or above      | Manual Review / Alert     |
-
-Test-set risk distribution:
-
-| Risk level | Transactions |  Share | Observed fraud rate |
-| ---------- | -----------: | -----: | ------------------: |
-| Low        |        6,405 | 64.05% |              15.04% |
-| Medium     |        1,610 | 16.10% |              16.46% |
-| High       |        1,985 | 19.85% |             100.00% |
-
-![Model-based Risk Score Distribution](outputs/figures/29_model_risk_score_distribution.png)
-
-The high-risk precision is a held-out synthetic test-set result and should not be interpreted as guaranteed production performance.
-
----
-
-## Anomaly Detection
-
-Isolation Forest was tested as an unsupervised complementary monitoring layer.
-
-| Metric                         | Result |
-| ------------------------------ | -----: |
-| ROC-AUC                        | 53.93% |
-| PR-AUC                         | 35.14% |
-| Precision at top 10% anomalies | 35.70% |
-| Recall at top 10% anomalies    | 11.11% |
-
-The anomaly detector performed only slightly above the dataset baseline and was not selected as the primary fraud model.
-
-Its potential role is instead to support:
-
-* previously unseen transaction patterns;
-* delayed or incomplete fraud labels;
-* exploratory investigation;
-* supplementary early-warning monitoring.
-
----
-
-## FastAPI Inference Service
-
-The trained preprocessing and Random Forest model are saved as one pipeline:
-
-```text
-models/fraud_detection_random_forest_pipeline.pkl
-```
-
-The API provides:
-
-| Method | Endpoint   | Description                  |
-| ------ | ---------- | ---------------------------- |
-| GET    | `/`        | Service information          |
-| GET    | `/health`  | Model and API health status  |
-| POST   | `/predict` | Transaction fraud prediction |
-
-Run the API locally:
-
-```powershell
-python -m uvicorn app.api:app --reload
-```
-
-Open the interactive documentation:
-
-```text
-http://localhost:8000/docs
-```
-
-Example prediction response:
-
-```json
-{
-  "fraud_probability": 0.232139,
-  "model_risk_score": 23.21,
-  "default_binary_prediction": 0,
-  "risk_level": "Medium",
-  "recommended_action": "Monitor / Secondary Check"
-}
-```
-
----
-
-## Streamlit Dashboard
-
-The Streamlit interface includes four monitoring sections:
-
-1. **Transaction Risk Scoring**
-
-   * submits raw transaction data to FastAPI;
-   * returns fraud probability and risk level;
-   * displays an operational recommendation.
-
-2. **Model Performance**
-
-   * compares supervised models;
-   * displays PR-AUC and recall;
-   * compares supervised and unsupervised approaches.
-
-3. **Risk Monitoring Overview**
-
-   * summarises Low, Medium and High risk groups;
-   * visualises risk-level distributions;
-   * displays fraud rates and model-score distributions.
-
-4. **High-risk Transactions**
-
-   * displays the highest-scoring transactions;
-   * supports CSV download for investigation.
-
-Run the dashboard locally:
-
-```powershell
-python -m streamlit run app/dashboard.py
-```
-
-Open:
-
-```text
-http://localhost:8501
-```
-
-The FastAPI service must also be running when using real-time transaction scoring.
-
----
-
-## Docker Deployment
-
-The FastAPI service and Streamlit dashboard are containerised as separate services.
-
-```text
-Browser
-   ↓
-Streamlit container
-   ↓  http://api:8000
-FastAPI container
-   ↓
-Saved Random Forest pipeline
-```
-
-Build and start the system:
-
-```powershell
-docker compose up -d --build
-```
-
-Check container status:
-
-```powershell
-docker compose ps
-```
-
-Expected services:
-
-```text
-fraud-risk-api          running / healthy
-fraud-risk-dashboard    running
-```
-
-Available endpoints:
-
-| Service               | Address                        |
-| --------------------- | ------------------------------ |
-| API health check      | `http://localhost:8000/health` |
-| Swagger documentation | `http://localhost:8000/docs`   |
-| Streamlit dashboard   | `http://localhost:8501`        |
-
-Stop and remove the containers:
-
-```powershell
-docker compose down
-```
-
----
-
-## Running the Full Analysis Pipeline
+## Running the Analysis Pipeline
 
 Create and activate a virtual environment:
 
@@ -472,59 +534,72 @@ Place the dataset at:
 data/raw/synthetic_fraud_dataset.csv
 ```
 
-Run the scripts in order:
+Run the analysis in order:
 
 ```powershell
 python src\01_data_cleaning.py
 python src\02_eda_fraud_analysis.py
 python src\03_sql_feature_engineering.py
+
+# Historical benchmark experiments
 python src\04_baseline_model.py
 python src\05_class_imbalance_models.py
 python src\06_threshold_analysis.py
-python src\07_risk_scoring.py
 python src\08_anomaly_detection.py
+
+# V2 methodology and governance
+python src\00_feature_leakage_audit.py
+python src\04b_temporal_ablation_models.py
+python src\04c_residual_signal_analysis.py
 python src\09_train_and_save_model.py
 python src\10_generate_architecture_diagram.py
+
+# Final validation
+python -m pytest -q
 ```
+
+The benchmark scripts are retained as historical experiment evidence. They should not be interpreted as the final deployment recommendation.
 
 ---
 
-## Key Business Insights
+## Key Lessons
 
-* Fraud detection should not be assessed using accuracy alone.
-* Precision and recall represent different operational costs.
-* Fixed fraud rules can improve fraud concentration but may create excessive review volume.
-* A conservative Random Forest can produce reliable alerts while still missing some fraud.
-* Risk tiers are more actionable than a single binary prediction.
-* Unsupervised anomaly detection is useful as a supplementary layer rather than a replacement for supervised fraud models.
-* Model thresholds should be selected according to investigation capacity and the financial cost of missed fraud.
+- High performance should be investigated, not automatically celebrated.
+- Random splits can misrepresent future transaction performance.
+- A deterministic proxy can dominate model metrics.
+- PR-AUC must be compared with fraud prevalence.
+- Feature ablation is essential when leakage or proxy risk is suspected.
+- A model that does not add out-of-time value should not be deployed.
+- Transparent rules can be easier to audit than opaque models, but synthetic rules are not production evidence.
+- Honest model rejection is a valid and valuable machine-learning outcome.
+- Governance must be reflected in artifacts, APIs, dashboards, and tests—not only in documentation.
 
 ---
 
 ## Limitations
 
-* The dataset is synthetic and has a much higher fraud rate than most real financial systems.
-* The project does not contain real customer or banking information.
-* Test-set results are not production guarantees.
-* Model probabilities may require calibration before real-world use.
-* Concept drift and changing fraud behaviour are not simulated.
-* The prototype does not include authentication, role-based access control or encrypted data storage.
-* A production system would require real-time monitoring, retraining, audit logs, governance and compliance review.
+- The dataset is synthetic and has an unusually high fraud rate.
+- The deterministic failed-count rule is a target-generation artifact.
+- User overlap indicates that the temporal evaluation mainly covers future transactions from existing users.
+- No real customer, banking, or payment data is included.
+- No production authentication, authorisation, audit logging, encryption, or regulatory workflow is implemented.
+- The diagnostic score is not calibrated for real-world decision-making.
+- Concept drift and delayed fraud labels are not fully simulated.
 
 ---
 
-## Possible Future Improvements
+## Future Improvements
 
-* probability calibration;
-* cost-sensitive threshold optimisation;
-* SHAP-based model explanations;
-* temporal validation and concept-drift monitoring;
-* model and data versioning;
-* real-time transaction streaming;
-* database-backed investigation case management;
-* user authentication and role-based access;
-* cloud deployment;
-* automated testing and CI/CD.
+- replace the synthetic dataset with realistic time-ordered transaction data;
+- use group-aware validation for unseen customers;
+- add delayed-label and concept-drift simulation;
+- introduce cost-sensitive evaluation;
+- add probability calibration only after meaningful ranking signal is established;
+- add SHAP explanations for an approved candidate model;
+- implement model and data versioning;
+- add CI/CD and automated Docker tests;
+- add authentication, audit logs, and case-management workflows;
+- deploy to a cloud environment only after governance approval.
 
 ---
 
@@ -532,4 +607,4 @@ python src\10_generate_architecture_diagram.py
 
 **Zeng Boyuan**
 
-MSc Statistics student with interests in data analytics, machine learning, financial risk monitoring and applied AI.
+MSc Statistics student interested in data analytics, machine learning, financial risk monitoring, model governance, and applied AI.
