@@ -1,0 +1,2 @@
+rows,fraud_count,fraud_rate,threshold,review_rate,accuracy,precision,recall,f1,roc_auc,pr_auc,true_negative,false_positive,false_negative,true_positive,model,feature_set
+10000,3228,0.3228,0.5,0.2027,0.8799,1.0,0.6279429987608426,0.7714557564224548,0.8139714993804212,0.7480429987608426,6772,0,1201,2027,Rule Baseline,failed_transaction_count_7d >= 4

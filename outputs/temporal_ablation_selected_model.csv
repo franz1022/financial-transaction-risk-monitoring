@@ -1,0 +1,2 @@
+selected_feature_set,selected_model,selection_split,selection_metric,validation_pr_auc,validation_roc_auc,validation_precision,validation_recall,validation_review_rate,selected_threshold,target_review_rate,risk_score_excluded,failed_count_excluded
+conservative_without_failed_count,XGBoost,validation,pr_auc,0.32304386320246703,0.5029789613783796,0.3215,0.20112605567719738,0.2,0.525938093662262,0.2,True,True
