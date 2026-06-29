@@ -1,0 +1,2 @@
+model,rows,fraud_count,fraud_rate,roc_auc,pr_auc,absolute_pr_auc_uplift,relative_pr_auc_uplift,selection_split,test_used_for_selection
+Logistic Regression,7973,1201,0.15063338768343157,0.48750561281625415,0.14580837151351927,-0.004825016169912294,-0.032031518670033905,validation,False

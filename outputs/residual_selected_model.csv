@@ -1,0 +1,2 @@
+selected_model,selection_split,selection_metric,validation_fraud_rate,validation_roc_auc,validation_pr_auc,validation_relative_pr_auc_uplift,deployment_status
+Logistic Regression,validation,pr_auc,0.1545917733316764,0.5110952090835659,0.15855565351740836,0.02564095165159573,diagnostic_candidate_only
