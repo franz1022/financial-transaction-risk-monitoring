@@ -1,11 +1,12 @@
+from __future__ import annotations
 
-from datetime import date, time, datetime
+from datetime import date, datetime, time
 from pathlib import Path
+import os
 
 import pandas as pd
 import requests
 import streamlit as st
-import os
 
 
 # ============================================================
@@ -13,18 +14,17 @@ import os
 # ============================================================
 
 st.set_page_config(
-    page_title="Financial Transaction Risk Monitoring",
+    page_title="Financial Transaction Risk Governance",
     page_icon="🛡️",
     layout="wide",
 )
 
 
 # ============================================================
-# 1. 项目路径和 API 设置
+# 1. 项目路径与 API 设置
 # ============================================================
 
 BASE_DIR = Path(__file__).resolve().parents[1]
-
 OUTPUT_DIR = BASE_DIR / "outputs"
 FIGURE_DIR = OUTPUT_DIR / "figures"
 
@@ -32,6 +32,7 @@ API_BASE_URL = os.getenv(
     "API_BASE_URL",
     "http://127.0.0.1:8000",
 )
+
 PREDICT_ENDPOINT = f"{API_BASE_URL}/predict"
 HEALTH_ENDPOINT = f"{API_BASE_URL}/health"
 
@@ -40,11 +41,8 @@ HEALTH_ENDPOINT = f"{API_BASE_URL}/health"
 # 2. 工具函数
 # ============================================================
 
-def check_api_health():
-    """
-    检查 FastAPI 是否正在运行。
-    """
-
+def check_api_health() -> tuple[bool, dict]:
+    """检查 FastAPI 是否在线。"""
     try:
         response = requests.get(
             HEALTH_ENDPOINT,
@@ -55,7 +53,10 @@ def check_api_health():
             return True, response.json()
 
         return False, {
-            "detail": f"API returned status {response.status_code}"
+            "detail": (
+                "API returned status "
+                f"{response.status_code}"
+            )
         }
 
     except requests.RequestException as exc:
@@ -64,11 +65,10 @@ def check_api_health():
         }
 
 
-def request_prediction(transaction_data):
-    """
-    把交易数据发送给 FastAPI /predict。
-    """
-
+def request_evaluation(
+    transaction_data: dict,
+) -> dict:
+    """向治理 API 提交单笔交易。"""
     response = requests.post(
         PREDICT_ENDPOINT,
         json=transaction_data,
@@ -77,7 +77,8 @@ def request_prediction(transaction_data):
 
     if response.status_code != 200:
         raise RuntimeError(
-            f"API request failed: {response.status_code} "
+            "API request failed: "
+            f"{response.status_code} "
             f"{response.text}"
         )
 
@@ -85,11 +86,10 @@ def request_prediction(transaction_data):
 
 
 @st.cache_data
-def load_csv(file_path):
-    """
-    缓存读取 CSV，避免页面每次操作都重新读取。
-    """
-
+def load_csv(
+    file_path: str | Path,
+) -> pd.DataFrame | None:
+    """缓存读取 CSV。"""
     path = Path(file_path)
 
     if not path.exists():
@@ -98,79 +98,194 @@ def load_csv(file_path):
     return pd.read_csv(path)
 
 
-def show_risk_result(result):
-    """
-    展示 FastAPI 返回的风险预测结果。
-    """
+def display_dataframe_if_exists(
+    title: str,
+    file_path: Path,
+    columns: list[str] | None = None,
+) -> None:
+    """存在时显示 CSV。"""
+    data = load_csv(file_path)
 
-    risk_level = result["risk_level"]
-    fraud_probability = result["fraud_probability"]
-    risk_score = result["model_risk_score"]
-    action = result["recommended_action"]
+    if data is None:
+        st.warning(
+            f"{file_path.name} was not found."
+        )
+        return
 
-    st.subheader("Prediction Result")
+    st.subheader(title)
+
+    if columns:
+        available_columns = [
+            column
+            for column in columns
+            if column in data.columns
+        ]
+
+        if available_columns:
+            data = data[available_columns]
+
+    st.dataframe(
+        data,
+        width="stretch",
+        hide_index=True,
+    )
+
+
+def show_governance_result(
+    result: dict,
+) -> None:
+    """展示治理 API 返回结果。"""
+    st.subheader("Governance Evaluation Result")
+
+    rule_triggered = bool(
+        result["rule_triggered"]
+    )
 
     col1, col2, col3, col4 = st.columns(4)
 
     col1.metric(
-        "Fraud Probability",
-        f"{fraud_probability * 100:.2f}%",
+        "Rule Triggered",
+        "Yes" if rule_triggered else "No",
     )
 
     col2.metric(
-        "Model Risk Score",
-        f"{risk_score:.2f} / 100",
+        "Decision Source",
+        result["decision_source"],
     )
 
     col3.metric(
-        "Risk Level",
-        risk_level,
+        "Deployment Eligible",
+        (
+            "Yes"
+            if result["deployment_eligible"]
+            else "No"
+        ),
     )
 
     col4.metric(
-        "Binary Prediction",
-        result["default_binary_prediction"],
+        "Automated Decision",
+        (
+            "Approved"
+            if result["automatic_decision_approved"]
+            else "Not Approved"
+        ),
     )
 
-    if risk_level == "High":
+    if rule_triggered:
         st.error(
-            f"High Risk — Recommended action: {action}"
+            f"{result['alert_label']} — "
+            f"{result['recommended_action']}"
         )
 
-    elif risk_level == "Medium":
-        st.warning(
-            f"Medium Risk — Recommended action: {action}"
+        st.write(
+            f"Observed `{result['rule_feature']}`: "
+            f"**{result['observed_rule_value']}**"
+        )
+
+        st.write(
+            "Transparent rule: "
+            f"`{result['rule_feature']} "
+            f"{result['rule_operator']} "
+            f"{result['rule_threshold']}`"
+        )
+
+        st.info(
+            "The residual diagnostic model was not applied "
+            "because this transaction triggered the "
+            "synthetic failed-count rule."
         )
 
     else:
-        st.success(
-            f"Low Risk — Recommended action: {action}"
+        st.warning(
+            result["alert_label"]
         )
 
-    st.progress(
-        min(max(float(fraud_probability), 0.0), 1.0),
-        text=f"Fraud probability: {fraud_probability * 100:.2f}%",
+        diagnostic_probability = (
+            result.get(
+                "diagnostic_probability"
+            )
+        )
+
+        diagnostic_score = result.get(
+            "diagnostic_score"
+        )
+
+        metric_col1, metric_col2 = st.columns(2)
+
+        metric_col1.metric(
+            "Diagnostic Probability",
+            (
+                f"{diagnostic_probability * 100:.2f}%"
+                if diagnostic_probability is not None
+                else "Not available"
+            ),
+        )
+
+        metric_col2.metric(
+            "Diagnostic Score",
+            (
+                f"{diagnostic_score:.2f} / 100"
+                if diagnostic_score is not None
+                else "Not available"
+            ),
+        )
+
+        st.info(
+            result["recommended_action"]
+        )
+
+        if diagnostic_probability is not None:
+            st.progress(
+                min(
+                    max(
+                        float(diagnostic_probability),
+                        0.0,
+                    ),
+                    1.0,
+                ),
+                text=(
+                    "Diagnostic probability only — "
+                    "not an approved fraud decision"
+                ),
+            )
+
+    st.warning(
+        result["governance_warning"]
     )
 
-    with st.expander("View derived time features"):
-        st.json(result["derived_time_features"])
+    with st.expander(
+        "View derived time features"
+    ):
+        st.json(
+            result["derived_time_features"]
+        )
 
-    with st.expander("View complete API response"):
+    with st.expander(
+        "View complete API response"
+    ):
         st.json(result)
 
 
 # ============================================================
-# 3. 页面标题
+# 3. 页面标题与治理声明
 # ============================================================
 
-st.title("Financial Transaction Risk Monitoring Dashboard")
+st.title(
+    "Financial Transaction Risk Governance Dashboard"
+)
 
 st.write(
     """
-    This dashboard provides transaction-level fraud prediction,
-    model-based risk scoring, risk-level classification and
-    operational recommendations through a FastAPI inference service.
+    This portfolio dashboard demonstrates transparent rule
+    evaluation, residual model diagnostics, out-of-time validation,
+    and model-governance controls. It does not approve, reject,
+    or block financial transactions.
     """
+)
+
+st.warning(
+    "Synthetic portfolio dataset only. "
+    "No customer-impact decision is approved."
 )
 
 
@@ -182,16 +297,18 @@ api_ok, api_info = check_api_health()
 
 if api_ok:
     st.success(
-        "FastAPI service is online and the fraud model is loaded."
+        "FastAPI governance service is online."
     )
 
-    with st.expander("API and model information"):
+    with st.expander(
+        "API, policy and artifact information"
+    ):
         st.json(api_info)
 
 else:
     st.error(
-        "FastAPI service is not available. "
-        "Please start it before submitting transactions."
+        "FastAPI is unavailable. Start the API "
+        "before submitting a transaction."
     )
 
     st.code(
@@ -199,41 +316,43 @@ else:
         language="powershell",
     )
 
-    st.write("API error details:")
     st.json(api_info)
 
 
 # ============================================================
-# 5. 创建 Dashboard Tabs
+# 5. 页面 Tabs
 # ============================================================
 
 tab1, tab2, tab3, tab4 = st.tabs(
     [
-        "Transaction Risk Scoring",
-        "Model Performance",
-        "Risk Monitoring Overview",
-        "High-risk Transactions",
+        "Transaction Evaluation",
+        "Model Validation",
+        "Rule & Residual Analysis",
+        "Governance Summary",
     ]
 )
 
 
 # ============================================================
-# Tab 1：单笔交易风险评分
+# Tab 1：单笔交易治理评估
 # ============================================================
 
 with tab1:
-    st.header("Single Transaction Risk Scoring")
+    st.header(
+        "Single Transaction Governance Evaluation"
+    )
 
     st.write(
         """
-        Enter the raw transaction information below.
-        The dashboard sends the transaction to the FastAPI service,
-        which automatically derives time features and returns the
-        fraud probability, risk score and recommended action.
+        The transparent rule is evaluated first. Transactions
+        outside the rule receive a residual diagnostic score,
+        but that score has no automated decision authority.
         """
     )
 
-    with st.form("transaction_form"):
+    with st.form(
+        "transaction_governance_form"
+    ):
         col1, col2, col3 = st.columns(3)
 
         with col1:
@@ -256,12 +375,12 @@ with tab1:
 
             transaction_date = st.date_input(
                 "Transaction Date",
-                value=date(2023, 8, 15),
+                value=date(2023, 10, 19),
             )
 
             transaction_time = st.time_input(
                 "Transaction Time",
-                value=time(22, 30),
+                value=time(20, 16),
             )
 
             account_balance = st.number_input(
@@ -305,17 +424,17 @@ with tab1:
 
             ip_address_flag = st.selectbox(
                 "Suspicious IP Address",
-                options=[0, 1],
-                format_func=lambda x: (
-                    "Yes" if x == 1 else "No"
+                [0, 1],
+                format_func=lambda value: (
+                    "Yes" if value == 1 else "No"
                 ),
             )
 
             previous_fraudulent_activity = st.selectbox(
                 "Previous Fraudulent Activity",
-                options=[0, 1],
-                format_func=lambda x: (
-                    "Yes" if x == 1 else "No"
+                [0, 1],
+                format_func=lambda value: (
+                    "Yes" if value == 1 else "No"
                 ),
             )
 
@@ -339,6 +458,10 @@ with tab1:
                 min_value=0,
                 value=3,
                 step=1,
+                help=(
+                    "A value of 4 or above triggers "
+                    "the transparent synthetic-data rule."
+                ),
             )
 
             card_type = st.selectbox(
@@ -375,16 +498,16 @@ with tab1:
                 ],
             )
 
-        submit_prediction = st.form_submit_button(
-            "Evaluate Transaction Risk",
+        submit_evaluation = st.form_submit_button(
+            "Evaluate Transaction",
             width="stretch",
         )
 
-    if submit_prediction:
+    if submit_evaluation:
         if not api_ok:
             st.error(
-                "Prediction cannot be completed because "
-                "the FastAPI service is offline."
+                "Evaluation cannot be completed "
+                "because FastAPI is offline."
             )
 
         else:
@@ -394,14 +517,26 @@ with tab1:
             )
 
             transaction_payload = {
-                "transaction_amount": transaction_amount,
-                "transaction_type": transaction_type,
-                "timestamp": combined_datetime.isoformat(),
-                "account_balance": account_balance,
+                "transaction_amount": (
+                    transaction_amount
+                ),
+                "transaction_type": (
+                    transaction_type
+                ),
+                "timestamp": (
+                    combined_datetime.isoformat()
+                ),
+                "account_balance": (
+                    account_balance
+                ),
                 "device_type": device_type,
                 "location": location,
-                "merchant_category": merchant_category,
-                "ip_address_flag": ip_address_flag,
+                "merchant_category": (
+                    merchant_category
+                ),
+                "ip_address_flag": (
+                    ip_address_flag
+                ),
                 "previous_fraudulent_activity": (
                     previous_fraudulent_activity
                 ),
@@ -416,352 +551,280 @@ with tab1:
                 ),
                 "card_type": card_type,
                 "card_age": card_age,
-                "transaction_distance": transaction_distance,
-                "authentication_method": authentication_method,
+                "transaction_distance": (
+                    transaction_distance
+                ),
+                "authentication_method": (
+                    authentication_method
+                ),
             }
 
             try:
                 with st.spinner(
-                    "Sending transaction to the fraud detection API..."
+                    "Sending transaction to "
+                    "the governance API..."
                 ):
-                    result = request_prediction(
+                    result = request_evaluation(
                         transaction_payload
                     )
 
-                show_risk_result(result)
+                show_governance_result(result)
 
             except Exception as exc:
                 st.exception(exc)
 
 
 # ============================================================
-# Tab 2：模型表现
+# Tab 2：模型验证证据
 # ============================================================
 
 with tab2:
-    st.header("Supervised Model Performance")
+    st.header(
+        "Out-of-Time Model Validation"
+    )
 
-    model_comparison_file = (
+    st.info(
+        "The original high benchmark score was driven "
+        "primarily by a deterministic synthetic proxy. "
+        "After removing that proxy, the conservative "
+        "models performed near random."
+    )
+
+    display_dataframe_if_exists(
+        "Temporal Feature Ablation — Validation",
         OUTPUT_DIR
-        / "class_imbalance_model_comparison.csv"
+        / "temporal_ablation_validation_results.csv",
+        [
+            "feature_set",
+            "model",
+            "selection_eligible",
+            "roc_auc",
+            "pr_auc",
+            "precision",
+            "recall",
+        ],
     )
 
-    model_comparison = load_csv(
-        model_comparison_file
+    display_dataframe_if_exists(
+        "Independent Test — Conservative Candidate",
+        OUTPUT_DIR
+        / "temporal_ablation_final_test_metrics.csv",
+        [
+            "feature_set",
+            "model",
+            "review_rate",
+            "precision",
+            "recall",
+            "f1",
+            "roc_auc",
+            "pr_auc",
+        ],
     )
-
-    if model_comparison is not None:
-        st.subheader("Model Comparison")
-
-        st.dataframe(
-            model_comparison,
-            width="stretch",
-            hide_index=True,
-        )
-
-        if (
-            "model" in model_comparison.columns
-            and "pr_auc" in model_comparison.columns
-        ):
-            chart_data = (
-                model_comparison[
-                    ["model", "pr_auc"]
-                ]
-                .set_index("model")
-            )
-
-            st.subheader("PR-AUC by Model")
-            st.bar_chart(chart_data)
-
-        if (
-            "model" in model_comparison.columns
-            and "recall" in model_comparison.columns
-        ):
-            recall_data = (
-                model_comparison[
-                    ["model", "recall"]
-                ]
-                .set_index("model")
-            )
-
-            st.subheader("Recall by Model")
-            st.bar_chart(recall_data)
-
-    else:
-        st.warning(
-            "class_imbalance_model_comparison.csv "
-            "was not found."
-        )
-
-    st.divider()
 
     col1, col2 = st.columns(2)
 
     with col1:
         figure_path = (
             FIGURE_DIR
-            / "18_model_comparison_pr_auc.png"
+            / "37_temporal_ablation_validation_pr_auc.png"
         )
 
         if figure_path.exists():
             st.image(
                 str(figure_path),
-                caption="Model Comparison by PR-AUC",
+                caption=(
+                    "Validation PR-AUC: "
+                    "benchmark versus conservative features"
+                ),
                 width="stretch",
             )
 
     with col2:
         figure_path = (
             FIGURE_DIR
-            / "21_precision_recall_curve_class_imbalance_models.png"
+            / "38_temporal_ablation_test_confusion_matrix.png"
         )
 
         if figure_path.exists():
             st.image(
                 str(figure_path),
-                caption="Precision-Recall Curves",
+                caption=(
+                    "Independent Test confusion matrix "
+                    "for the conservative candidate"
+                ),
                 width="stretch",
             )
 
-    st.subheader("Supervised vs Unsupervised Modeling")
-
-    comparison_file = (
-        OUTPUT_DIR
-        / "supervised_vs_anomaly_detection_comparison.csv"
-    )
-
-    supervised_vs_anomaly = load_csv(
-        comparison_file
-    )
-
-    if supervised_vs_anomaly is not None:
-        st.dataframe(
-            supervised_vs_anomaly,
-            width="stretch",
-            hide_index=True,
-        )
-
-        st.info(
-            "Supervised Random Forest is the primary fraud model. "
-            "Isolation Forest is retained as a complementary "
-            "early-warning layer for unusual transactions."
-        )
-
 
 # ============================================================
-# Tab 3：风险监控概览
+# Tab 3：规则与残余信号分析
 # ============================================================
 
 with tab3:
-    st.header("Risk Monitoring Overview")
+    st.header(
+        "Transparent Rule and Residual Signal"
+    )
 
-    risk_summary_file = (
+    display_dataframe_if_exists(
+        "Fraud Rate by Failed Transaction Count",
         OUTPUT_DIR
-        / "risk_level_summary.csv"
+        / "failed_count_fraud_rate_audit.csv",
+        [
+            "failed_transaction_count_7d",
+            "transaction_count",
+            "fraud_count",
+            "fraud_rate_pct",
+        ],
     )
 
-    risk_summary = load_csv(
-        risk_summary_file
+    display_dataframe_if_exists(
+        "Residual Model Validation Comparison",
+        OUTPUT_DIR
+        / "residual_validation_model_comparison.csv",
+        [
+            "model",
+            "fraud_rate",
+            "roc_auc",
+            "pr_auc",
+            "relative_pr_auc_uplift",
+        ],
     )
 
-    if risk_summary is not None:
-        st.subheader("Risk-level Summary")
+    display_dataframe_if_exists(
+        "Two-Layer Test Strategy",
+        OUTPUT_DIR
+        / "two_layer_test_strategy.csv",
+        [
+            "scenario",
+            "review_rate",
+            "precision",
+            "recall",
+            "f1",
+            "residual_incremental_precision",
+        ],
+    )
 
-        st.dataframe(
-            risk_summary,
-            width="stretch",
-            hide_index=True,
+    col1, col2 = st.columns(2)
+
+    with col1:
+        figure_path = (
+            FIGURE_DIR
+            / "35_failed_count_fraud_rate_audit.png"
         )
 
-        total_transactions = int(
-            risk_summary["transaction_count"].sum()
+        if figure_path.exists():
+            st.image(
+                str(figure_path),
+                caption=(
+                    "Deterministic failed-count pattern"
+                ),
+                width="stretch",
+            )
+
+    with col2:
+        figure_path = (
+            FIGURE_DIR
+            / "40_two_layer_test_strategy.png"
         )
 
-        low_row = risk_summary[
-            risk_summary["risk_level"] == "Low"
-        ]
+        if figure_path.exists():
+            st.image(
+                str(figure_path),
+                caption=(
+                    "Rule-only versus two-layer strategies"
+                ),
+                width="stretch",
+            )
 
-        medium_row = risk_summary[
-            risk_summary["risk_level"] == "Medium"
-        ]
+    st.error(
+        "Deployment decision: Do not deploy the residual "
+        "machine-learning model."
+    )
 
-        high_row = risk_summary[
-            risk_summary["risk_level"] == "High"
-        ]
 
-        low_count = (
-            int(low_row["transaction_count"].iloc[0])
-            if len(low_row) > 0
-            else 0
-        )
+# ============================================================
+# Tab 4：治理摘要
+# ============================================================
 
-        medium_count = (
-            int(medium_row["transaction_count"].iloc[0])
-            if len(medium_row) > 0
-            else 0
-        )
+with tab4:
+    st.header(
+        "Model Governance Summary"
+    )
 
-        high_count = (
-            int(high_row["transaction_count"].iloc[0])
-            if len(high_row) > 0
-            else 0
-        )
+    artifact_summary = load_csv(
+        OUTPUT_DIR
+        / "diagnostic_model_artifact_summary.csv"
+    )
 
-        high_fraud_rate = (
-            float(high_row["fraud_rate_pct"].iloc[0])
-            if len(high_row) > 0
-            else 0
-        )
+    if artifact_summary is not None:
+        row = artifact_summary.iloc[0]
 
         col1, col2, col3, col4 = st.columns(4)
 
         col1.metric(
-            "Scored Transactions",
-            f"{total_transactions:,}",
+            "Artifact Role",
+            str(row["artifact_role"]),
         )
 
         col2.metric(
-            "Low Risk",
-            f"{low_count:,}",
+            "Deployment Eligible",
+            str(row["deployment_eligible"]),
         )
 
         col3.metric(
-            "Medium Risk",
-            f"{medium_count:,}",
+            "Test ROC-AUC",
+            f"{float(row['test_roc_auc']):.4f}",
         )
 
         col4.metric(
-            "High Risk",
-            f"{high_count:,}",
-            delta=f"Fraud rate {high_fraud_rate:.2f}%",
+            "Test PR-AUC",
+            f"{float(row['test_pr_auc']):.4f}",
         )
-
-        chart_data = (
-            risk_summary[
-                ["risk_level", "transaction_count"]
-            ]
-            .set_index("risk_level")
-        )
-
-        st.subheader("Transaction Distribution by Risk Level")
-        st.bar_chart(chart_data)
-
-    else:
-        st.warning(
-            "risk_level_summary.csv was not found."
-        )
-
-    st.divider()
-
-    col1, col2 = st.columns(2)
-
-    with col1:
-        figure_path = (
-            FIGURE_DIR
-            / "27_transaction_count_by_risk_level.png"
-        )
-
-        if figure_path.exists():
-            st.image(
-                str(figure_path),
-                caption="Transaction Count by Risk Level",
-                width="stretch",
-            )
-
-    with col2:
-        figure_path = (
-            FIGURE_DIR
-            / "28_fraud_rate_by_risk_level.png"
-        )
-
-        if figure_path.exists():
-            st.image(
-                str(figure_path),
-                caption="Fraud Rate by Risk Level",
-                width="stretch",
-            )
-
-    figure_path = (
-        FIGURE_DIR
-        / "29_model_risk_score_distribution.png"
-    )
-
-    if figure_path.exists():
-        st.image(
-            str(figure_path),
-            caption="Model-based Risk Score Distribution",
-            width="stretch",
-        )
-
-
-# ============================================================
-# Tab 4：高风险交易清单
-# ============================================================
-
-with tab4:
-    st.header("High-risk Transaction Monitoring")
-
-    high_risk_file = (
-        OUTPUT_DIR
-        / "top_100_high_risk_transactions.csv"
-    )
-
-    high_risk_df = load_csv(
-        high_risk_file
-    )
-
-    if high_risk_df is None:
-        st.warning(
-            "top_100_high_risk_transactions.csv "
-            "was not found."
-        )
-
-    else:
-        st.write(
-            """
-            This table contains the 100 transactions with the
-            highest model-based risk scores in the test dataset.
-            """
-        )
-
-        display_columns = [
-            col
-            for col in [
-                "scored_transaction_id",
-                "transaction_amount",
-                "transaction_type",
-                "device_type",
-                "location",
-                "merchant_category",
-                "ip_address_flag",
-                "previous_fraudulent_activity",
-                "failed_transaction_count_7d",
-                "transaction_distance",
-                "random_forest_fraud_probability",
-                "model_risk_score",
-                "risk_level",
-                "recommended_action",
-                "actual_fraud_label",
-            ]
-            if col in high_risk_df.columns
-        ]
 
         st.dataframe(
-            high_risk_df[display_columns],
+            artifact_summary,
             width="stretch",
             hide_index=True,
         )
 
-        csv_data = high_risk_df.to_csv(
-            index=False
-        ).encode("utf-8")
+    st.subheader(
+        "Approved Uses"
+    )
 
-        st.download_button(
-            label="Download High-risk Transaction List",
-            data=csv_data,
-            file_name="top_100_high_risk_transactions.csv",
-            mime="text/csv",
-        )
+    st.markdown(
+        """
+        - Engineering demonstration
+        - Model-risk diagnostics
+        - API and dashboard integration
+        - Transparent rule and workload analysis
+        """
+    )
+
+    st.subheader(
+        "Prohibited Uses"
+    )
+
+    st.markdown(
+        """
+        - Automatic transaction approval
+        - Automatic rejection
+        - Transaction blocking
+        - Customer-impact decisions
+        """
+    )
+
+    st.subheader(
+        "Final Positioning"
+    )
+
+    st.write(
+        """
+        This project demonstrates end-to-end risk-monitoring
+        engineering together with proxy-feature detection,
+        temporal validation, model rejection, transparent rule
+        design, and governance-aware system integration.
+        """
+    )
 
 
 # ============================================================
@@ -771,8 +834,6 @@ with tab4:
 st.divider()
 
 st.caption(
-    "Financial Transaction Risk Monitoring System | "
-    "Python · SQL · Scikit-learn · XGBoost · "
-    "Isolation Forest · FastAPI · Streamlit"
+    "Financial Transaction Risk Governance Prototype | "
+    "Python · SQL · Scikit-learn · FastAPI · Streamlit · Docker"
 )
-
