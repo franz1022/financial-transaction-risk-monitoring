@@ -1,4 +1,0 @@
-recommended_action,transaction_count,fraud_count,avg_model_risk_score,transaction_pct,fraud_rate_pct
-Auto Approve,6405,963,18.549819969885345,64.05,15.035128805620609
-Manual Review / Alert,1985,1985,84.64346835891884,19.85,100.0
-Monitor / Secondary Check,1610,265,20.94831211782781,16.1,16.459627329192546
