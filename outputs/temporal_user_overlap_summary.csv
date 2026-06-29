@@ -1,0 +1,4 @@
+comparison,left_unique_users,right_unique_users,overlap_users,overlap_rate_left,overlap_rate_right
+train_vs_validation,8677,6055,5836,0.6725826898697707,0.963831544178365
+train_vs_test,8677,6040,5818,0.6705082401751757,0.9632450331125828
+validation_vs_test,6055,6040,4078,0.6734929810074318,0.6751655629139073
