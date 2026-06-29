@@ -1,0 +1,12 @@
+{
+  "selected_residual_model": "Logistic Regression",
+  "test_fraud_rate": 0.15063338768343157,
+  "test_roc_auc": 0.48750561281625415,
+  "test_pr_auc": 0.14580837151351927,
+  "absolute_pr_auc_uplift": -0.004825016169912294,
+  "relative_pr_auc_uplift": -0.032031518670033905,
+  "minimum_required_roc_auc": 0.55,
+  "minimum_required_relative_pr_auc_uplift": 0.1,
+  "deployment_recommendation": "do_not_deploy_residual_model",
+  "conclusion": "After removing the deterministic failed-count proxy, the remaining features do not provide sufficient out-of-time predictive signal. Keep the rule layer as a synthetic-data demonstration and treat the residual model as diagnostic only."
+}

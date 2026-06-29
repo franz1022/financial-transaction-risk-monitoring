@@ -1,0 +1,59 @@
+{
+  "target_column": "fraud_label",
+  "feature_columns": [
+    "transaction_amount",
+    "transaction_type",
+    "account_balance",
+    "device_type",
+    "location",
+    "merchant_category",
+    "ip_address_flag",
+    "previous_fraudulent_activity",
+    "daily_transaction_count",
+    "avg_transaction_amount_7d",
+    "card_type",
+    "card_age",
+    "transaction_distance",
+    "authentication_method",
+    "is_weekend",
+    "month",
+    "day",
+    "hour",
+    "day_of_week"
+  ],
+  "numeric_columns": [
+    "transaction_amount",
+    "account_balance",
+    "ip_address_flag",
+    "previous_fraudulent_activity",
+    "daily_transaction_count",
+    "avg_transaction_amount_7d",
+    "card_age",
+    "transaction_distance",
+    "is_weekend",
+    "month",
+    "day",
+    "hour",
+    "day_of_week"
+  ],
+  "categorical_columns": [
+    "transaction_type",
+    "device_type",
+    "location",
+    "merchant_category",
+    "card_type",
+    "authentication_method"
+  ],
+  "excluded_columns": [
+    "failed_transaction_count_7d",
+    "fraud_label",
+    "risk_score",
+    "timestamp",
+    "transaction_id",
+    "user_id",
+    "year"
+  ],
+  "failed_count_rule_column": "failed_transaction_count_7d",
+  "failed_count_rule_threshold": 4,
+  "artifact_role": "diagnostic_only"
+}

@@ -1,0 +1,2 @@
+rows,fraud_count,fraud_rate,threshold,review_rate,accuracy,precision,recall,f1,roc_auc,pr_auc,true_negative,false_positive,false_negative,true_positive,feature_set,model,threshold_source,test_used_for_selection
+10000,3228,0.3228,0.525938093662262,0.2031,0.6029,0.3170851797144264,0.19950433705080545,0.2449134816505039,0.492135755984808,0.32044655405166866,5385,1387,2584,644,conservative_without_failed_count,XGBoost,validation,False

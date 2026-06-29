@@ -1,0 +1,31 @@
+{
+  "selected_feature_set": "conservative_without_failed_count",
+  "selected_model": "XGBoost",
+  "selected_threshold": 0.525938093662262,
+  "target_review_rate": 0.2,
+  "selection_split": "validation",
+  "final_evaluation_split": "test",
+  "risk_score_excluded": true,
+  "failed_transaction_count_7d_excluded": true,
+  "features": [
+    "transaction_amount",
+    "transaction_type",
+    "account_balance",
+    "device_type",
+    "location",
+    "merchant_category",
+    "ip_address_flag",
+    "previous_fraudulent_activity",
+    "daily_transaction_count",
+    "avg_transaction_amount_7d",
+    "card_type",
+    "card_age",
+    "transaction_distance",
+    "authentication_method",
+    "is_weekend",
+    "month",
+    "day",
+    "hour",
+    "day_of_week"
+  ]
+}

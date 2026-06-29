@@ -2,7 +2,7 @@ from pathlib import Path
 
 import matplotlib
 
-# 在 VS Code 终端运行时不弹出额外窗口
+# VSCode / PowerShell 终端运行时不弹出窗口
 matplotlib.use("Agg")
 
 import matplotlib.pyplot as plt
@@ -11,21 +11,20 @@ from matplotlib.patches import FancyArrowPatch, FancyBboxPatch
 
 # ============================================================
 # 0. 可修改设置区
-# 后续修改字体、颜色、位置时，优先调整这里
 # ============================================================
 
-FIGURE_WIDTH = 20
-FIGURE_HEIGHT = 10
+FIGURE_WIDTH = 22
+FIGURE_HEIGHT = 11
 OUTPUT_DPI = 180
 
-TITLE_SIZE = 24
+TITLE_SIZE = 23
 SUBTITLE_SIZE = 11
-SECTION_TITLE_SIZE = 13
-BOX_TITLE_SIZE = 11
-BOX_TEXT_SIZE = 9
+SECTION_TITLE_SIZE = 12
+BOX_TITLE_SIZE = 10.5
+BOX_TEXT_SIZE = 8.7
 NOTE_SIZE = 9
 
-BOX_EDGE_WIDTH = 1.5
+BOX_EDGE_WIDTH = 1.4
 ARROW_WIDTH = 1.8
 
 COLORS = {
@@ -35,12 +34,11 @@ COLORS = {
     "section_border": "#CBD5E1",
     "section_fill": "#FFFFFF",
     "data": "#DBEAFE",
-    "processing": "#E0F2FE",
-    "model": "#EDE9FE",
-    "risk": "#FEF3C7",
+    "audit": "#FDE68A",
+    "validation": "#EDE9FE",
+    "policy": "#FCE7F3",
     "api": "#DCFCE7",
-    "dashboard": "#FCE7F3",
-    "docker": "#E2E8F0",
+    "deployment": "#E2E8F0",
     "arrow": "#475569",
     "note_fill": "#FFF7ED",
     "note_border": "#FDBA74",
@@ -52,7 +50,6 @@ COLORS = {
 # ============================================================
 
 BASE_DIR = Path(__file__).resolve().parents[1]
-
 OUTPUT_DIR = BASE_DIR / "outputs" / "architecture"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -61,21 +58,10 @@ SVG_PATH = OUTPUT_DIR / "financial_risk_system_architecture.svg"
 
 
 # ============================================================
-# 2. 绘图工具函数
+# 2. 绘图函数
 # ============================================================
 
-def draw_section(
-    ax,
-    x,
-    y,
-    width,
-    height,
-    title,
-):
-    """
-    绘制每一个大的项目阶段区域。
-    """
-
+def draw_section(ax, x, y, width, height, title):
     section = FancyBboxPatch(
         (x, y),
         width,
@@ -86,12 +72,10 @@ def draw_section(
         facecolor=COLORS["section_fill"],
         zorder=1,
     )
-
     ax.add_patch(section)
-
     ax.text(
         x + width / 2,
-        y + height - 0.35,
+        y + height - 0.34,
         title,
         ha="center",
         va="center",
@@ -102,20 +86,7 @@ def draw_section(
     )
 
 
-def draw_box(
-    ax,
-    x,
-    y,
-    width,
-    height,
-    title,
-    lines,
-    fill_color,
-):
-    """
-    绘制阶段内部的功能框。
-    """
-
+def draw_box(ax, x, y, width, height, title, lines, fill_color):
     box = FancyBboxPatch(
         (x, y),
         width,
@@ -126,12 +97,11 @@ def draw_box(
         facecolor=fill_color,
         zorder=4,
     )
-
     ax.add_patch(box)
 
     ax.text(
         x + width / 2,
-        y + height - 0.28,
+        y + height - 0.27,
         title,
         ha="center",
         va="center",
@@ -141,75 +111,55 @@ def draw_box(
         zorder=5,
     )
 
-    body_text = "\n".join(lines)
-
     ax.text(
         x + width / 2,
-        y + height / 2 - 0.18,
-        body_text,
+        y + height / 2 - 0.16,
+        "\n".join(lines),
         ha="center",
         va="center",
         fontsize=BOX_TEXT_SIZE,
         color=COLORS["subtitle"],
-        linespacing=1.45,
+        linespacing=1.42,
         zorder=5,
     )
 
 
-def draw_arrow(
-    ax,
-    start,
-    end,
-    dashed=False,
-):
-    """
-    绘制阶段之间的箭头。
-    start / end 格式为：(x, y)
-    """
-
-    line_style = "--" if dashed else "-"
-
+def draw_arrow(ax, start, end):
     arrow = FancyArrowPatch(
         start,
         end,
         arrowstyle="-|>",
         mutation_scale=15,
         linewidth=ARROW_WIDTH,
-        linestyle=line_style,
         color=COLORS["arrow"],
         connectionstyle="arc3,rad=0.0",
         shrinkA=2,
         shrinkB=2,
         zorder=7,
     )
-
     ax.add_patch(arrow)
 
 
 # ============================================================
-# 3. 创建画布
+# 3. 画布
 # ============================================================
 
-fig, ax = plt.subplots(
-    figsize=(FIGURE_WIDTH, FIGURE_HEIGHT),
-)
-
+fig, ax = plt.subplots(figsize=(FIGURE_WIDTH, FIGURE_HEIGHT))
 fig.patch.set_facecolor(COLORS["background"])
 ax.set_facecolor(COLORS["background"])
-
-ax.set_xlim(0, 20)
-ax.set_ylim(0, 10)
+ax.set_xlim(0, 22)
+ax.set_ylim(0, 11)
 ax.axis("off")
 
 
 # ============================================================
-# 4. 标题与副标题
+# 4. 标题
 # ============================================================
 
 ax.text(
-    10,
-    9.55,
-    "End-to-End Financial Transaction Risk Monitoring System",
+    11,
+    10.5,
+    "Governance-Aware Financial Transaction Risk Monitoring System",
     ha="center",
     va="center",
     fontsize=TITLE_SIZE,
@@ -218,11 +168,11 @@ ax.text(
 )
 
 ax.text(
-    10,
-    9.08,
+    11,
+    10.03,
     (
-        "Synthetic transaction data | SQL analytics | Machine learning | "
-        "Risk scoring | FastAPI | Streamlit | Docker Compose"
+        "Synthetic data | Proxy-feature audit | Temporal validation | "
+        "Diagnostic-only model | FastAPI | Streamlit | Docker Compose"
     ),
     ha="center",
     va="center",
@@ -232,456 +182,314 @@ ax.text(
 
 
 # ============================================================
-# 5. 大阶段区域
+# 5. 六个阶段
 # ============================================================
 
-SECTION_Y = 2.0
-SECTION_HEIGHT = 6.45
+SECTION_Y = 2.05
+SECTION_HEIGHT = 7.25
 
-sections = {
-    "data": {
-        "x": 0.4,
-        "w": 2.55,
-        "title": "1. Data Source",
-    },
-    "processing": {
-        "x": 3.15,
-        "w": 3.05,
-        "title": "2. Data Processing",
-    },
-    "model": {
-        "x": 6.4,
-        "w": 3.35,
-        "title": "3. Modeling",
-    },
-    "risk": {
-        "x": 9.95,
-        "w": 2.9,
-        "title": "4. Risk Decision",
-    },
-    "api": {
-        "x": 13.05,
-        "w": 2.75,
-        "title": "5. Model Serving",
-    },
-    "deployment": {
-        "x": 16.0,
-        "w": 3.6,
-        "title": "6. Monitoring & Deployment",
-    },
-}
+sections = [
+    (0.35, 3.05, "1. Data & Analytics"),
+    (3.60, 3.25, "2. Model-Risk Audit"),
+    (7.05, 3.55, "3. Temporal Validation"),
+    (10.80, 3.45, "4. Decision Policy"),
+    (14.45, 3.10, "5. Governance API"),
+    (17.75, 3.90, "6. Monitoring & Deployment"),
+]
 
-for section in sections.values():
+for x, width, title in sections:
     draw_section(
-        ax=ax,
-        x=section["x"],
-        y=SECTION_Y,
-        width=section["w"],
-        height=SECTION_HEIGHT,
-        title=section["title"],
+        ax,
+        x,
+        SECTION_Y,
+        width,
+        SECTION_HEIGHT,
+        title,
     )
 
 
 # ============================================================
-# 6. Data Source
+# 6. Data & Analytics
 # ============================================================
 
 draw_box(
-    ax,
-    x=0.72,
-    y=5.3,
-    width=1.9,
-    height=2.15,
-    title="Synthetic Dataset",
-    lines=[
+    ax, 0.70, 6.45, 2.35, 1.85,
+    "Synthetic Dataset",
+    [
         "50,000 transactions",
-        "21 raw variables",
+        "21 original variables",
         "2023 transaction period",
         "Fraud label available",
     ],
-    fill_color=COLORS["data"],
+    COLORS["data"],
 )
 
 draw_box(
-    ax,
-    x=0.72,
-    y=2.75,
-    width=1.9,
-    height=1.75,
-    title="Raw Variables",
-    lines=[
-        "Amount and balance",
-        "Device and location",
-        "Transaction behaviour",
-        "Authentication signals",
-    ],
-    fill_color=COLORS["data"],
-)
-
-
-# ============================================================
-# 7. Data Processing
-# ============================================================
-
-draw_box(
-    ax,
-    x=3.48,
-    y=6.05,
-    width=2.38,
-    height=1.45,
-    title="Cleaning & Validation",
-    lines=[
-        "Column standardisation",
+    ax, 0.70, 4.45, 2.35, 1.55,
+    "Cleaning & Features",
+    [
         "Missing / duplicate checks",
-        "Timestamp conversion",
-    ],
-    fill_color=COLORS["processing"],
-)
-
-draw_box(
-    ax,
-    x=3.48,
-    y=4.3,
-    width=2.38,
-    height=1.35,
-    title="Feature Engineering",
-    lines=[
-        "Year, month and hour",
-        "Day of week and weekend",
+        "Timestamp features",
         "Behavioural variables",
     ],
-    fill_color=COLORS["processing"],
+    COLORS["data"],
 )
 
 draw_box(
-    ax,
-    x=3.48,
-    y=2.55,
-    width=2.38,
-    height=1.35,
-    title="SQL & EDA",
-    lines=[
-        "SQLite transaction table",
-        "User risk aggregation",
+    ax, 0.70, 2.65, 2.35, 1.35,
+    "SQL & EDA",
+    [
         "Fraud pattern analysis",
+        "User-level aggregation",
+        "Rule-based summaries",
     ],
-    fill_color=COLORS["processing"],
+    COLORS["data"],
 )
 
 
 # ============================================================
-# 8. Modeling
+# 7. Model-Risk Audit
 # ============================================================
 
 draw_box(
-    ax,
-    x=6.73,
-    y=5.55,
-    width=2.69,
-    height=1.95,
-    title="Supervised Models",
-    lines=[
-        "Logistic Regression",
-        "Random Forest",
-        "Balanced Random Forest",
-        "Weighted XGBoost",
+    ax, 3.95, 6.35, 2.55, 1.95,
+    "Feature Leakage Audit",
+    [
+        "risk_score excluded",
+        "Proxy-feature checks",
+        "User overlap analysis",
+        "Split integrity review",
     ],
-    fill_color=COLORS["model"],
+    COLORS["audit"],
 )
 
 draw_box(
-    ax,
-    x=6.73,
-    y=3.7,
-    width=2.69,
-    height=1.4,
-    title="Model Evaluation",
-    lines=[
-        "Precision and recall",
-        "ROC-AUC and PR-AUC",
-        "Confusion matrix",
+    ax, 3.95, 4.35, 2.55, 1.55,
+    "Deterministic Proxy",
+    [
+        "failed_count >= 4",
+        "100% synthetic fraud rate",
+        "Not real-world evidence",
     ],
-    fill_color=COLORS["model"],
+    COLORS["audit"],
 )
 
 draw_box(
-    ax,
-    x=6.73,
-    y=2.45,
-    width=2.69,
-    height=0.9,
-    title="Anomaly Detection",
-    lines=[
-        "Isolation Forest",
+    ax, 3.95, 2.65, 2.55, 1.25,
+    "Audit Outcome",
+    [
+        "Inflated benchmark detected",
+        "Deployment claim rejected",
     ],
-    fill_color=COLORS["model"],
+    COLORS["audit"],
 )
 
 
 # ============================================================
-# 9. Risk Decision
+# 8. Temporal Validation
 # ============================================================
 
 draw_box(
-    ax,
-    x=10.28,
-    y=5.8,
-    width=2.24,
-    height=1.7,
-    title="Threshold Analysis",
-    lines=[
-        "Precision-recall trade-off",
-        "Review workload",
-        "Missed fraud analysis",
+    ax, 7.42, 6.45, 2.82, 1.85,
+    "Chronological Split",
+    [
+        "Train: earliest 60%",
+        "Validation: next 20%",
+        "Test: latest 20%",
+        "No random split",
     ],
-    fill_color=COLORS["risk"],
+    COLORS["validation"],
 )
 
 draw_box(
-    ax,
-    x=10.28,
-    y=3.75,
-    width=2.24,
-    height=1.65,
-    title="Risk Score",
-    lines=[
-        "Probability × 100",
-        "Low: below 20",
-        "Medium: 20 to 70",
-        "High: 70 or above",
+    ax, 7.42, 4.25, 2.82, 1.75,
+    "Feature Ablation",
+    [
+        "Benchmark feature set",
+        "Conservative feature set",
+        "Proxy contribution isolated",
     ],
-    fill_color=COLORS["risk"],
+    COLORS["validation"],
 )
 
 draw_box(
-    ax,
-    x=10.28,
-    y=2.45,
-    width=2.24,
-    height=0.9,
-    title="Operational Action",
-    lines=[
-        "Approve / Monitor / Review",
+    ax, 7.42, 2.55, 2.82, 1.25,
+    "Residual Test",
+    [
+        "Test ROC-AUC: 0.4875",
+        "Test PR-AUC: 0.1458",
     ],
-    fill_color=COLORS["risk"],
+    COLORS["validation"],
 )
 
 
 # ============================================================
-# 10. Model Serving
+# 9. Decision Policy
 # ============================================================
 
 draw_box(
-    ax,
-    x=13.38,
-    y=5.65,
-    width=2.09,
-    height=1.85,
-    title="Saved Pipeline",
-    lines=[
-        "Preprocessing",
-        "Feature encoding",
-        "Random Forest model",
+    ax, 11.15, 6.25, 2.75, 2.05,
+    "Transparent Synthetic Rule",
+    [
+        "failed_count >= 4",
+        "Synthetic Rule Alert",
+        "Manual review demo only",
+        "Production eligible: No",
+    ],
+    COLORS["policy"],
+)
+
+draw_box(
+    ax, 11.15, 4.15, 2.75, 1.65,
+    "Residual Diagnostic Model",
+    [
+        "Logistic pipeline",
+        "19 diagnostic features",
+        "No decision authority",
+    ],
+    COLORS["policy"],
+)
+
+draw_box(
+    ax, 11.15, 2.55, 2.75, 1.15,
+    "Governance Decision",
+    [
+        "Do not deploy",
+        "No approve / reject / block",
+    ],
+    COLORS["policy"],
+)
+
+
+# ============================================================
+# 10. Governance API
+# ============================================================
+
+draw_box(
+    ax, 14.80, 6.35, 2.40, 1.95,
+    "Diagnostic Artifact",
+    [
+        "Preprocessing pipeline",
+        "Residual Logistic model",
+        "Metadata + policy JSON",
         "Joblib serialisation",
     ],
-    fill_color=COLORS["api"],
+    COLORS["api"],
 )
 
 draw_box(
-    ax,
-    x=13.38,
-    y=3.65,
-    width=2.09,
-    height=1.55,
-    title="FastAPI Service",
-    lines=[
+    ax, 14.80, 4.20, 2.40, 1.70,
+    "FastAPI Service",
+    [
+        "GET /",
         "GET /health",
         "POST /predict",
         "Pydantic validation",
     ],
-    fill_color=COLORS["api"],
+    COLORS["api"],
 )
 
 draw_box(
-    ax,
-    x=13.38,
-    y=2.45,
-    width=2.09,
-    height=0.8,
-    title="JSON Response",
-    lines=[
-        "Probability + action",
+    ax, 14.80, 2.55, 2.40, 1.15,
+    "Governance Response",
+    [
+        "Rule status + diagnostic score",
+        "Deployment eligibility: No",
     ],
-    fill_color=COLORS["api"],
+    COLORS["api"],
 )
 
 
 # ============================================================
-# 11. Monitoring and Deployment
+# 11. Monitoring & Deployment
 # ============================================================
 
 draw_box(
-    ax,
-    x=16.35,
-    y=5.45,
-    width=2.9,
-    height=2.05,
-    title="Streamlit Dashboard",
-    lines=[
-        "Single-transaction scoring",
-        "Model performance",
-        "Risk monitoring overview",
-        "High-risk transaction list",
+    ax, 18.15, 6.25, 3.10, 2.05,
+    "Streamlit Dashboard",
+    [
+        "Transaction governance check",
+        "Temporal validation evidence",
+        "Rule and residual analysis",
+        "Governance summary",
     ],
-    fill_color=COLORS["dashboard"],
+    COLORS["deployment"],
 )
 
 draw_box(
-    ax,
-    x=16.35,
-    y=3.6,
-    width=2.9,
-    height=1.4,
-    title="Docker Compose",
-    lines=[
+    ax, 18.15, 4.25, 3.10, 1.55,
+    "Docker Compose",
+    [
         "FastAPI container",
         "Streamlit container",
-        "Internal service network",
+        "API health dependency",
     ],
-    fill_color=COLORS["docker"],
+    COLORS["deployment"],
 )
 
 draw_box(
-    ax,
-    x=16.35,
-    y=2.45,
-    width=2.9,
-    height=0.75,
-    title="Health Check",
-    lines=[
-        "API starts before dashboard",
+    ax, 18.15, 2.55, 3.10, 1.20,
+    "Automated Tests",
+    [
+        "17 API and validation tests",
+        "Input and governance checks",
     ],
-    fill_color=COLORS["docker"],
+    COLORS["deployment"],
 )
 
 
 # ============================================================
-# 12. 主流程箭头
+# 12. 箭头
 # ============================================================
 
-draw_arrow(
-    ax,
-    start=(2.63, 5.3),
-    end=(3.45, 5.3),
-)
+draw_arrow(ax, (3.08, 5.55), (3.92, 5.55))
+draw_arrow(ax, (6.53, 5.55), (7.39, 5.55))
+draw_arrow(ax, (10.27, 5.55), (11.12, 5.55))
+draw_arrow(ax, (13.93, 5.55), (14.77, 5.55))
+draw_arrow(ax, (17.23, 5.55), (18.12, 5.55))
 
-draw_arrow(
-    ax,
-    start=(5.88, 5.3),
-    end=(6.7, 5.3),
-)
+draw_arrow(ax, (1.88, 6.42), (1.88, 6.02))
+draw_arrow(ax, (1.88, 4.42), (1.88, 4.02))
 
-draw_arrow(
-    ax,
-    start=(9.44, 5.3),
-    end=(10.25, 5.3),
-)
+draw_arrow(ax, (5.23, 6.32), (5.23, 5.92))
+draw_arrow(ax, (5.23, 4.32), (5.23, 3.92))
 
-draw_arrow(
-    ax,
-    start=(12.54, 5.3),
-    end=(13.35, 5.3),
-)
+draw_arrow(ax, (8.83, 6.42), (8.83, 6.02))
+draw_arrow(ax, (8.83, 4.22), (8.83, 3.82))
 
-draw_arrow(
-    ax,
-    start=(15.49, 5.3),
-    end=(16.32, 5.3),
-)
+draw_arrow(ax, (12.52, 6.22), (12.52, 5.82))
+draw_arrow(ax, (12.52, 4.12), (12.52, 3.72))
+
+draw_arrow(ax, (16.00, 6.32), (16.00, 5.92))
+draw_arrow(ax, (16.00, 4.17), (16.00, 3.72))
+
+draw_arrow(ax, (19.70, 6.22), (19.70, 5.82))
+draw_arrow(ax, (19.70, 4.22), (19.70, 3.77))
 
 
 # ============================================================
-# 13. 阶段内部箭头
-# ============================================================
-
-draw_arrow(
-    ax,
-    start=(4.67, 6.03),
-    end=(4.67, 5.67),
-)
-
-draw_arrow(
-    ax,
-    start=(4.67, 4.28),
-    end=(4.67, 3.92),
-)
-
-draw_arrow(
-    ax,
-    start=(8.08, 5.53),
-    end=(8.08, 5.12),
-)
-
-draw_arrow(
-    ax,
-    start=(11.4, 5.78),
-    end=(11.4, 5.42),
-)
-
-draw_arrow(
-    ax,
-    start=(11.4, 3.72),
-    end=(11.4, 3.37),
-)
-
-draw_arrow(
-    ax,
-    start=(14.42, 5.62),
-    end=(14.42, 5.22),
-)
-
-draw_arrow(
-    ax,
-    start=(14.42, 3.62),
-    end=(14.42, 3.28),
-)
-
-draw_arrow(
-    ax,
-    start=(17.8, 5.42),
-    end=(17.8, 5.02),
-)
-
-draw_arrow(
-    ax,
-    start=(17.8, 3.57),
-    end=(17.8, 3.22),
-)
-
-
-# ============================================================
-# 14. 底部说明
+# 13. 底部治理说明
 # ============================================================
 
 note = FancyBboxPatch(
     (0.65, 0.65),
-    18.7,
-    0.82,
+    20.70,
+    0.90,
     boxstyle="round,pad=0.03,rounding_size=0.08",
     linewidth=1.2,
     edgecolor=COLORS["note_border"],
     facecolor=COLORS["note_fill"],
     zorder=2,
 )
-
 ax.add_patch(note)
 
 ax.text(
-    10,
-    1.06,
+    11,
+    1.10,
     (
-        "Proof-of-concept using synthetic data. "
-        "Held-out test metrics demonstrate the workflow and are not production guarantees."
+        "Portfolio proof of concept using synthetic data. "
+        "The deterministic rule and diagnostic model are not approved "
+        "for production or customer-impact decisions."
     ),
     ha="center",
     va="center",
@@ -692,7 +500,7 @@ ax.text(
 
 
 # ============================================================
-# 15. 保存图片
+# 14. 保存
 # ============================================================
 
 plt.savefig(
@@ -710,6 +518,6 @@ plt.savefig(
 
 plt.close(fig)
 
-print("Architecture diagram generated successfully.")
+print("Governance architecture diagram generated successfully.")
 print(f"PNG: {PNG_PATH}")
 print(f"SVG: {SVG_PATH}")

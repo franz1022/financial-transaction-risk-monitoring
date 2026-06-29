@@ -1,0 +1,31 @@
+{
+  "policy_name": "Synthetic Rule and Diagnostic Model Governance Policy",
+  "policy_version": "2.0",
+  "primary_decision_layer": {
+    "type": "transparent_rule",
+    "feature": "failed_transaction_count_7d",
+    "operator": ">=",
+    "threshold": 4,
+    "trigger_label": "Synthetic Rule Alert",
+    "recommended_action": "Manual review for portfolio demonstration only",
+    "production_eligible": false
+  },
+  "secondary_layer": {
+    "type": "residual_logistic_diagnostic_score",
+    "model_file": "models/residual_logistic_diagnostic_pipeline.pkl",
+    "decision_authority": false,
+    "production_eligible": false,
+    "allowed_use": [
+      "engineering demonstration",
+      "model-risk diagnostics",
+      "API and dashboard integration"
+    ],
+    "prohibited_use": [
+      "automatic approval",
+      "automatic rejection",
+      "transaction blocking",
+      "customer-impact decisions"
+    ]
+  },
+  "governance_warning": "The dataset is synthetic. The deterministic failed-count rule must not be interpreted as evidence of real banking fraud performance."
+}
